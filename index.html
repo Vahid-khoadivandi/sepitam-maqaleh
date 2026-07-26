@@ -1,0 +1,2026 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>داشبورد مدیریت مقالات 2 - همگام‌سازی ابری</title>
+    <link href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css" rel="stylesheet">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Vazirmatn', Tahoma, sans-serif;
+            background: #f4f7fc;
+            color: #1e293b;
+            padding: 20px;
+        }
+        .container { max-width: 1400px; margin: 0 auto; }
+        button {
+            cursor: pointer; border: none; background: #e2e8f0;
+            padding: 6px 14px; border-radius: 6px; font-size: 0.9rem;
+            transition: 0.2s; font-family: inherit;
+        }
+        button:hover { background: #cbd5e1; }
+        button.primary { background: #2563eb; color: white; }
+        button.primary:hover { background: #1d4ed8; }
+        button.danger { background: #dc2626; color: white; }
+        button.danger:hover { background: #b91c1c; }
+        button.success { background: #16a34a; color: white; }
+        button.success:hover { background: #15803d; }
+        button.secondary { background: #64748b; color: white; }
+        button.secondary:hover { background: #475569; }
+        button.cloud-btn {
+            background: #8b5cf6;
+            color: white;
+        }
+        button.cloud-btn:hover { background: #7c3aed; }
+        input, select, textarea {
+            width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1;
+            border-radius: 6px; font-size: 0.95rem; background: white;
+            font-family: inherit;
+        }
+        label { display: block; margin-top: 12px; font-weight: 600; }
+        .flex { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+        .flex-between { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; }
+        .gap-10 { gap: 10px; }
+        .mt-10 { margin-top: 10px; }
+        .mb-10 { margin-bottom: 10px; }
+        .text-center { text-align: center; }
+        .text-muted { color: #64748b; font-size: 0.85rem; }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px; margin-bottom: 25px;
+        }
+        .stat-card {
+            background: white; padding: 16px; border-radius: 12px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.05); text-align: center;
+        }
+        .stat-card span { display: block; font-size: 2rem; font-weight: 700; color: #2563eb; }
+        .stat-card .label { font-size: 0.9rem; color: #64748b; }
+
+        .filters {
+            background: white; padding: 15px 20px; border-radius: 12px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.05); margin-bottom: 20px;
+            display: flex; flex-wrap: wrap; gap: 15px; align-items: flex-end;
+        }
+        .filters .filter-group { flex: 1 1 150px; min-width: 120px; }
+        .filters .filter-group label { font-size: 0.8rem; margin-top: 0; font-weight: 500; color: #475569; }
+
+        .table-wrapper {
+            background: white; border-radius: 12px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.05); overflow-x: auto;
+            padding: 0 4px 4px 4px;
+        }
+        table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+        th {
+            background: #f8fafc; padding: 12px 10px; text-align: right;
+            border-bottom: 2px solid #e2e8f0; white-space: nowrap;
+            cursor: pointer;
+            user-select: none;
+            transition: 0.15s;
+        }
+        th:hover { background: #eef2f6; }
+        th .sort-ico {
+            display: inline-block;
+            margin-right: 4px;
+            font-size: 0.7rem;
+            color: #94a3b8;
+            transition: 0.15s;
+        }
+        th.sorted .sort-ico { color: #2563eb; }
+        td { padding: 10px; border-bottom: 1px solid #e2e8f0; vertical-align: middle; }
+        tr:hover td { background: #f8fafc; }
+        .status-badge {
+            display: inline-block; padding: 4px 12px; border-radius: 20px;
+            font-size: 0.8rem; font-weight: 600;
+        }
+        .status-loaded { background: #dcfce7; color: #166534; }
+        .status-unloaded { background: #fee2e2; color: #991b1b; }
+        .tag-pill {
+            display: inline-block; background: #e2e8f0; padding: 2px 10px;
+            border-radius: 12px; margin: 2px 4px 2px 0; font-size: 0.75rem;
+            font-weight: 500;
+        }
+        .action-btns button { margin: 2px 4px; padding: 4px 10px; font-size: 0.8rem; }
+        .copy-btn {
+            background: #e2e8f0; border: none; padding: 4px 10px; border-radius: 4px;
+            font-size: 0.75rem; cursor: pointer; transition: 0.15s;
+        }
+        .copy-btn:hover { background: #cbd5e1; }
+
+        .modal {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.4); justify-content: center; align-items: center;
+            z-index: 1000;
+        }
+        .modal.active { display: flex; }
+        .modal-content {
+            background: white; padding: 30px 35px; border-radius: 16px;
+            max-width: 800px; width: 95%; max-height: 90vh; overflow-y: auto;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2); position: relative;
+        }
+        .modal-content .close {
+            position: absolute; top: 12px; left: 18px; font-size: 1.8rem;
+            cursor: pointer; color: #94a3b8;
+        }
+        .modal-content .close:hover { color: #1e293b; }
+        .modal-content h2 { margin-bottom: 15px; }
+
+        .tag-selector {
+            border: 1px solid #cbd5e1; border-radius: 6px;
+            padding: 8px 12px; background: #f8fafc; margin-top: 4px;
+        }
+        .tag-selector .selected-tags {
+            display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px;
+            min-height: 32px;
+        }
+        .tag-selector .selected-tags .tag-item {
+            background: #e2e8f0; padding: 2px 10px 2px 6px; border-radius: 16px;
+            font-size: 0.85rem; display: inline-flex; align-items: center;
+            gap: 4px; border: 1px solid #cbd5e1;
+        }
+        .tag-selector .selected-tags .tag-item .remove {
+            cursor: pointer; font-weight: bold; color: #dc2626; margin-right: 4px;
+        }
+        .tag-selector .search-box {
+            display: flex; gap: 8px; align-items: center;
+        }
+        .tag-selector .search-box input {
+            flex: 1; padding: 6px 10px; border: 1px solid #cbd5e1;
+            border-radius: 6px; font-size: 0.9rem;
+        }
+        .tag-selector .search-box input:focus {
+            outline: none; border-color: #2563eb;
+        }
+        .tag-selector .suggestions {
+            max-height: 150px;
+            overflow-y: auto;
+            margin-top: 6px;
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            display: none;
+        }
+        .tag-selector .suggestions.show { display: block; }
+        .tag-selector .suggestions .suggestion-item {
+            padding: 6px 12px;
+            cursor: pointer;
+            border-bottom: 1px solid #f1f5f9;
+            font-size: 0.9rem;
+            transition: background 0.15s;
+        }
+        .tag-selector .suggestions .suggestion-item:hover,
+        .tag-selector .suggestions .suggestion-item.active {
+            background: #2563eb;
+            color: white;
+        }
+        .tag-selector .suggestions .suggestion-item:last-child { border-bottom: none; }
+
+        .bulk-add-area {
+            background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 8px;
+            padding: 12px 16px; margin: 12px 0;
+        }
+        .bulk-add-area textarea {
+            width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1;
+            border-radius: 6px; font-size: 0.9rem; resize: vertical;
+            min-height: 60px; font-family: inherit;
+        }
+        .bulk-add-area .hint { font-size: 0.8rem; color: #64748b; margin-top: 4px; }
+        .bulk-add-area .action-row {
+            display: flex; gap: 8px; margin-top: 8px; align-items: center;
+        }
+        .bulk-add-area .action-row button { padding: 4px 16px; }
+
+        .date-input-wrapper {
+            position: relative; display: flex; align-items: center;
+        }
+        .date-input-wrapper input {
+            flex: 1; padding-left: 40px; cursor: pointer;
+        }
+        .date-input-wrapper .calendar-icon {
+            position: absolute; left: 10px; top: 50%; transform: translateY(-50%);
+            cursor: pointer; font-size: 1.2rem; color: #64748b;
+            background: none; border: none; padding: 4px;
+        }
+        .date-input-wrapper .calendar-icon:hover { color: #2563eb; }
+
+        .pdp-overlay {
+            position: fixed; inset: 0; z-index: 9999;
+            background: rgba(0,0,0,0.2);
+            display: flex; align-items: center; justify-content: center;
+        }
+        .pdp-overlay .pdp-box {
+            background: white; border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 20px; min-width: 280px; max-width: 340px;
+            font-family: 'Vazirmatn', Tahoma, sans-serif; direction: rtl;
+            animation: pdpPop 0.2s ease;
+        }
+        @keyframes pdpPop {
+            from { transform: scale(0.9); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+        .pdp-box .pdp-header {
+            display: flex; align-items: center; justify-content: space-between;
+            margin-bottom: 12px; font-weight: 700; font-size: 0.95rem;
+        }
+        .pdp-box .pdp-header button {
+            background: none; border: none; font-size: 1.2rem;
+            cursor: pointer; padding: 4px 8px; border-radius: 6px;
+            color: #475569; transition: 0.15s;
+        }
+        .pdp-box .pdp-header button:hover { background: #e2e8f0; color: #1e293b; }
+        .pdp-box .pdp-header .pdp-month-year {
+            cursor: pointer; padding: 4px 12px; border-radius: 6px;
+            transition: 0.15s;
+        }
+        .pdp-box .pdp-header .pdp-month-year:hover { background: #e2e8f0; }
+        .pdp-box .pdp-days {
+            display: grid; grid-template-columns: repeat(7, 1fr);
+            gap: 2px; text-align: center;
+        }
+        .pdp-box .pdp-days .pdp-dow {
+            font-size: 0.7rem; color: #94a3b8; font-weight: 600; padding: 4px 0;
+        }
+        .pdp-box .pdp-days button {
+            background: none; border: none; padding: 6px 0; border-radius: 6px;
+            cursor: pointer; font-family: inherit; font-size: 0.85rem;
+            transition: 0.1s; color: #1e293b;
+        }
+        .pdp-box .pdp-days button:hover { background: #e2e8f0; }
+        .pdp-box .pdp-days button.pdp-today { font-weight: 700; color: #2563eb; }
+        .pdp-box .pdp-days button.pdp-selected { background: #2563eb; color: white; font-weight: 700; }
+        .pdp-box .pdp-days button.pdp-other-month { color: #cbd5e1; }
+        .pdp-box .pdp-footer {
+            display: flex; justify-content: space-between; margin-top: 12px;
+            padding-top: 10px; border-top: 1px solid #e2e8f0;
+        }
+        .pdp-box .pdp-footer button {
+            background: none; border: none; font-size: 0.8rem; color: #64748b;
+            cursor: pointer; padding: 4px 12px; border-radius: 6px;
+            transition: 0.15s; font-family: inherit;
+        }
+        .pdp-box .pdp-footer button:hover { background: #e2e8f0; color: #1e293b; }
+
+        .category-tag {
+            display: inline-flex; align-items: center; gap: 6px;
+            background: #e2e8f0; padding: 2px 10px; border-radius: 16px;
+            font-size: 0.8rem; margin: 2px;
+        }
+        .category-tag .remove-cat {
+            cursor: pointer; font-weight: bold; color: #dc2626;
+        }
+
+        .toast-wrap {
+            position: fixed; bottom: 20px; left: 20px; z-index: 99999;
+            display: flex; flex-direction: column; gap: 8px;
+        }
+        .toast {
+            background: #1e293b; color: #e2e8f0; padding: 10px 18px;
+            border-radius: 8px; font-size: 0.9rem; box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            animation: slideUp 0.3s ease; border-right: 4px solid #2563eb;
+            min-width: 200px;
+        }
+        .toast.success { border-right-color: #16a34a; }
+        .toast.error { border-right-color: #dc2626; }
+        .toast.info { border-right-color: #64748b; }
+        .toast.warn { border-right-color: #f59e0b; }
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .cloud-status {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            margin-right: 8px;
+        }
+        .cloud-status.online {
+            background: #dcfce7;
+            color: #166534;
+        }
+        .cloud-status.offline {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+        .cloud-status.syncing {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        @media (max-width: 700px) {
+            .filters .filter-group { flex: 1 1 100%; }
+            .stats { grid-template-columns: 1fr 1fr; }
+            .modal-content { padding: 20px; }
+            .pdp-box { min-width: 260px; max-width: 90vw; }
+        }
+    </style>
+</head>
+<body>
+<div class="container" id="app">
+
+    <div class="flex-between mb-10">
+        <h1>📄2 داشبورد مدیریت مقالات</h1>
+        <div class="flex gap-10">
+            <button class="primary" id="newArticleBtn">➕ مقاله جدید</button>
+            <button class="secondary" onclick="openTagManagementModal()">🏷️ مدیریت برچسب‌ها</button>
+            <button class="secondary" onclick="manageCategories()">📂 مدیریت دسته‌بندی‌ها</button>
+            <button class="success" onclick="exportData()">💾 پشتیبان‌گیری</button>
+            <button class="secondary" onclick="importData()">📂 بازیابی پشتیبان</button>
+            <button class="cloud-btn" onclick="syncToCloud()">☁️ ذخیره در ابر</button>
+            <button class="cloud-btn" onclick="restoreFromCloud()" style="background:#6d28d9;">📥 بازیابی از ابر</button>
+            <span id="cloudStatus" class="cloud-status offline">آفلاین</span>
+        </div>
+    </div>
+
+    <div class="stats" id="statsContainer">
+        <div class="stat-card"><span id="totalCount">0</span><div class="label">کل مقالات</div></div>
+        <div class="stat-card"><span id="loadedCount">0</span><div class="label">بارگذاری شده</div></div>
+        <div class="stat-card"><span id="unloadedCount">0</span><div class="label">بارگذاری نشده</div></div>
+        <div class="stat-card"><span id="tagCount">0</span><div class="label">تعداد برچسب‌ها</div></div>
+    </div>
+
+    <div class="filters">
+        <div class="filter-group">
+            <label>وضعیت</label>
+            <select id="filterStatus" onchange="applyFilters()">
+                <option value="">همه</option>
+                <option value="1">بارگذاری شده</option>
+                <option value="0">بارگذاری نشده</option>
+            </select>
+        </div>
+        <div class="filter-group">
+            <label>دسته‌بندی</label>
+            <select id="filterCategory" onchange="applyFilters()"><option value="">همه</option></select>
+        </div>
+        <div class="filter-group">
+            <label>برچسب</label>
+            <select id="filterTag" onchange="applyFilters()"><option value="">همه</option></select>
+        </div>
+        <div class="filter-group" style="flex:2;">
+            <label>جستجو</label>
+            <input type="text" id="searchInput" placeholder="جستجو در عنوان..." oninput="applyFilters()">
+        </div>
+    </div>
+
+    <div class="table-wrapper">
+        <table>
+            <thead><tr>
+                <th data-sort="id" class="sorted"># <span class="sort-ico">▼</span></th>
+                <th>عنوان</th>
+                <th data-sort="status">وضعیت <span class="sort-ico">⇅</span></th>
+                <th>دسته‌بندی</th>
+                <th data-sort="publishDate">تاریخ انتشار <span class="sort-ico">⇅</span></th>
+                <th>برچسب‌ها</th>
+                <th>عملیات</th>
+            </tr></thead>
+            <tbody id="tableBody"><tr><td colspan="7" class="text-center">در حال بارگذاری...</td></tr></tbody>
+        </table>
+    </div>
+
+    <!-- Modal مقاله -->
+    <div class="modal" id="articleModal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('articleModal')">&times;</span>
+            <h2 id="articleModalTitle">افزودن مقاله جدید</h2>
+            <form id="articleForm" onsubmit="saveArticle(event)">
+                <input type="hidden" id="editArticleId">
+                <label>عنوان * <input type="text" id="aTitle" required></label>
+                <label>وضعیت
+                    <select id="aStatus">
+                        <option value="0">بارگذاری نشده</option>
+                        <option value="1">بارگذاری شده</option>
+                    </select>
+                </label>
+                <label>تاریخ انتشار (شمسی)
+                    <div class="date-input-wrapper">
+                        <input type="text" id="aPublishDate" placeholder="YYYY/MM/DD" dir="ltr" style="text-align:left;" readonly>
+                        <button type="button" class="calendar-icon" onclick="openPersianDatepicker('aPublishDate')" title="انتخاب از تقویم">📅</button>
+                    </div>
+                    <span class="text-muted" style="font-weight:400;">مثال: 1403/05/20</span>
+                </label>
+                <label>دسته‌بندی
+                    <select id="aCategory">
+                        <option value="">انتخاب دسته‌بندی...</option>
+                    </select>
+                    <div style="margin-top:4px;display:flex;gap:6px;flex-wrap:wrap;">
+                        <input type="text" id="newCategoryInput" placeholder="دسته‌بندی جدید" style="flex:1;min-width:120px;padding:4px 8px;font-size:0.85rem;">
+                        <button type="button" class="primary" onclick="addNewCategory()" style="padding:4px 12px;font-size:0.85rem;">➕ افزودن</button>
+                    </div>
+                </label>
+                <label>مسیر پوشه مقاله
+                    <div class="flex">
+                        <input type="text" id="aLocalPath" placeholder="مسیر کامل پوشه را وارد کنید..." style="flex:1;">
+                        <button type="button" onclick="copyPath('aLocalPath')" class="copy-btn" title="کپی مسیر">📋 کپی مسیر</button>
+                    </div>
+                    <span class="text-muted">ⓘ مسیر کامل پوشه حاوی مقاله را به‌صورت دستی وارد کنید.</span>
+                </label>
+                <label>لینک مقاله در سایت <input type="url" id="aSiteUrl" placeholder="https://..."></label>
+
+                <label>برچسب‌ها
+                    <div class="tag-selector" id="tagSelector">
+                        <div class="selected-tags" id="selectedTagsContainer"></div>
+                        <div class="search-box">
+                            <input type="text" id="tagSearchInput" placeholder="جستجوی برچسب..." autocomplete="off">
+                            <button type="button" onclick="addSelectedTag()" class="primary" style="padding:4px 12px;">➕</button>
+                        </div>
+                        <div class="suggestions" id="tagSuggestions"></div>
+                    </div>
+                </label>
+
+                <label>توضیحات <textarea id="aDescription" rows="2"></textarea></label>
+
+                <div class="flex" style="margin-top:18px;">
+                    <button type="submit" class="primary">💾 ذخیره</button>
+                    <button type="button" onclick="closeModal('articleModal')">انصراف</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal مدیریت برچسب‌ها -->
+    <div class="modal" id="tagManagementModal">
+        <div class="modal-content" style="max-width: 800px;">
+            <span class="close" onclick="closeModal('tagManagementModal')">&times;</span>
+            <h2>🏷️ مدیریت برچسب‌ها</h2>
+            <div class="bulk-add-area">
+                <label style="font-weight:500; margin-top:0;">افزودن چند برچسب با کاما</label>
+                <textarea id="bulkTagInput" placeholder="مثال: آموزش, تکنولوژی, برنامه‌نویسی, طراحی"></textarea>
+                <div class="hint">برچسب‌ها را با کاما (، یا ,) جدا کنید.</div>
+                <div class="action-row">
+                    <button class="success" onclick="addBulkTags()">➕ افزودن برچسب‌ها</button>
+                    <span id="bulkStatus" class="text-muted"></span>
+                </div>
+            </div>
+            <div style="margin-bottom:15px; margin-top:10px;">
+                <button class="primary" onclick="openTagModal()">➕ برچسب جدید (تکی)</button>
+                <span style="margin-right:12px;color:var(--text-3);font-size:0.85rem;">مرتب‌سازی بر اساس:</span>
+                <select id="tagSortSelect" class="select" style="width:auto;display:inline-block;padding:4px 12px;font-size:0.85rem;min-width:140px;">
+                    <option value="id" selected>شماره ثبت</option>
+                    <option value="name">نام</option>
+                    <option value="count_desc">بیشترین استفاده</option>
+                    <option value="count_asc">کمترین استفاده</option>
+                </select>
+            </div>
+            <div class="table-wrapper">
+                <table>
+                    <thead><tr>
+                        <th>ردیف</th>
+                        <th>نام</th>
+                        <th>رنگ</th>
+                        <th>تعداد مقالات</th>
+                        <th>عملیات</th>
+                    </tr></thead>
+                    <tbody id="tagManagementBody"><tr><td colspan="5" class="text-center">در حال بارگذاری...</td></tr></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal مدیریت دسته‌بندی‌ها -->
+    <div class="modal" id="categoryModal">
+        <div class="modal-content" style="max-width: 600px;">
+            <span class="close" onclick="closeModal('categoryModal')">&times;</span>
+            <h2>📂 مدیریت دسته‌بندی‌ها</h2>
+            <div style="margin:12px 0;">
+                <div class="flex">
+                    <input type="text" id="catManageInput" placeholder="نام دسته‌بندی جدید" style="flex:1;">
+                    <button class="primary" onclick="addCategoryFromManage()">➕ افزودن</button>
+                </div>
+            </div>
+            <div id="categoryList" style="display:flex;flex-wrap:wrap;gap:8px;padding:10px;background:#f8fafc;border-radius:8px;min-height:50px;border:1px solid #e2e8f0;"></div>
+        </div>
+    </div>
+
+    <!-- Modal برچسب تکی -->
+    <div class="modal" id="tagModal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('tagModal')">&times;</span>
+            <h2 id="tagModalTitle">افزودن برچسب جدید</h2>
+            <form id="tagForm" onsubmit="saveTag(event)">
+                <input type="hidden" id="editTagId">
+                <label>نام برچسب * <input type="text" id="tName" required></label>
+                <label>رنگ (اختیاری) <input type="color" id="tColor" value="#3b82f6"></label>
+                <div class="flex" style="margin-top:18px;">
+                    <button type="submit" class="primary">💾 ذخیره</button>
+                    <button type="button" onclick="closeModal('tagModal')">انصراف</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <input type="file" id="importFile" accept=".json" style="display:none" onchange="handleImport(event)">
+    <div class="toast-wrap" id="toastWrap"></div>
+</div>
+
+<script>
+// ============================================================
+//  JSONBIN CONFIG
+// ============================================================
+const JSONBIN_BIN_ID = '6a6598fdf5f4af5e29c20f31';
+const JSONBIN_ACCESS_KEY = '$2a$10$I7LtzkBIws2j.vCXHv1Sc.Sh1QYYU43H4wgYIQTM59TAhwuApkQDi';
+const JSONBIN_URL = `https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}`;
+
+let isCloudSyncing = false;
+
+// ============================================================
+//  TOAST NOTIFICATION
+// ============================================================
+function showToast(msg, type = 'info') {
+    const wrap = document.getElementById('toastWrap');
+    const t = document.createElement('div');
+    t.className = 'toast ' + type;
+    t.textContent = msg;
+    wrap.appendChild(t);
+    setTimeout(() => {
+        t.style.opacity = '0';
+        t.style.transition = '0.3s';
+        setTimeout(() => t.remove(), 300);
+    }, 4000);
+}
+
+// ============================================================
+//  CLOUD STATUS
+// ============================================================
+function updateCloudStatus(status, message = '') {
+    const el = document.getElementById('cloudStatus');
+    if (!el) return;
+    el.className = 'cloud-status ' + status;
+    const labels = {
+        'online': '✅ متصل',
+        'offline': '⛔ آفلاین',
+        'syncing': '🔄 در حال همگام‌سازی...'
+    };
+    el.textContent = labels[status] || status;
+}
+
+// ============================================================
+//  FUNCTIONS TO ENSURE DB IS OPEN
+// ============================================================
+async function ensureDbOpen() {
+    if (!db) {
+        await openDB();
+    }
+    return db;
+}
+
+// ============================================================
+//  JSONBIN FUNCTIONS (اصلاح شده با ensureDbOpen)
+// ============================================================
+async function syncToCloud() {
+    if (isCloudSyncing) {
+        showToast('⏳ همگام‌سازی در حال انجام است...', 'warn');
+        return;
+    }
+    isCloudSyncing = true;
+    updateCloudStatus('syncing');
+
+    try {
+        // اطمینان از باز بودن پایگاه داده
+        await ensureDbOpen();
+
+        showToast('⏳ در حال ذخیره در فضای ابری...', 'info');
+        const articles = await getAll('articles');
+        const tags = await getAll('tags');
+        const rels = await getAll('article_tags');
+        const history = await getAll('history');
+        const data = {
+            articles,
+            tags,
+            rels,
+            history,
+            categories,
+            exportedAt: new Date().toISOString()
+        };
+
+        const response = await fetch(JSONBIN_URL, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Access-Key': JSONBIN_ACCESS_KEY,
+            },
+            body: JSON.stringify(data)
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error('خطا در ذخیره‌سازی: ' + errorText);
+        }
+
+        updateCloudStatus('online');
+        showToast('✅ داده‌ها با موفقیت در فضای ابری ذخیره شدند.', 'success');
+    } catch (err) {
+        updateCloudStatus('offline');
+        showToast('❌ خطا در ذخیره‌سازی: ' + err.message, 'error');
+        console.error(err);
+    } finally {
+        isCloudSyncing = false;
+    }
+}
+
+async function restoreFromCloud() {
+    if (isCloudSyncing) {
+        showToast('⏳ همگام‌سازی در حال انجام است...', 'warn');
+        return;
+    }
+    isCloudSyncing = true;
+    updateCloudStatus('syncing');
+
+    try {
+        showToast('⏳ در حال بازیابی از فضای ابری...', 'info');
+        const response = await fetch(JSONBIN_URL, {
+            headers: {
+                'X-Access-Key': JSONBIN_ACCESS_KEY,
+            }
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error('خطا در بازیابی: ' + errorText);
+        }
+
+        const result = await response.json();
+        const data = result.record || result;
+
+        if (!data.articles || !data.tags) {
+            throw new Error('فرمت داده نامعتبر است یا داده‌ای وجود ندارد.');
+        }
+
+        if (!confirm('⚠️ این عمل تمام داده‌های فعلی را بازنویسی می‌کند. ادامه؟')) {
+            updateCloudStatus('online');
+            isCloudSyncing = false;
+            return;
+        }
+
+        // اطمینان از باز بودن db قبل از بستن
+        await ensureDbOpen();
+
+        db.close();
+        const req = indexedDB.deleteDatabase(DB_NAME);
+        req.onsuccess = () => {
+            openDB().then(() => {
+                importAllData(data).then(() => {
+                    if (data.categories && Array.isArray(data.categories)) {
+                        categories = data.categories;
+                        saveCategories();
+                    }
+                    updateCloudStatus('online');
+                    showToast('✅ داده‌ها با موفقیت بازیابی شدند.', 'success');
+                    loadData();
+                });
+            });
+        };
+    } catch (err) {
+        updateCloudStatus('offline');
+        showToast('❌ خطا در بازیابی: ' + err.message, 'error');
+        console.error(err);
+    } finally {
+        isCloudSyncing = false;
+    }
+}
+
+// چک کردن وضعیت اتصال به JSONBin
+async function checkCloudConnection() {
+    try {
+        const response = await fetch(JSONBIN_URL, {
+            headers: {
+                'X-Access-Key': JSONBIN_ACCESS_KEY,
+            }
+        });
+        if (response.ok) {
+            updateCloudStatus('online');
+        } else {
+            updateCloudStatus('offline');
+        }
+    } catch (err) {
+        updateCloudStatus('offline');
+    }
+}
+
+// ============================================================
+//  CATEGORY MANAGEMENT
+// ============================================================
+const CATEGORIES_KEY = 'article_categories';
+let categories = [];
+
+function loadCategories() {
+    try {
+        const data = localStorage.getItem(CATEGORIES_KEY);
+        categories = data ? JSON.parse(data) : ['تکنولوژی', 'علمی', 'پزشکی', 'اقتصادی', 'فرهنگی', 'ورزشی', 'سیاسی'];
+        if (!categories || !categories.length) {
+            categories = ['تکنولوژی', 'علمی', 'پزشکی', 'اقتصادی', 'فرهنگی', 'ورزشی', 'سیاسی'];
+        }
+        localStorage.setItem(CATEGORIES_KEY, JSON.stringify(categories));
+    } catch (e) {
+        categories = ['تکنولوژی', 'علمی', 'پزشکی', 'اقتصادی', 'فرهنگی', 'ورزشی', 'سیاسی'];
+        localStorage.setItem(CATEGORIES_KEY, JSON.stringify(categories));
+    }
+}
+
+function saveCategories() {
+    localStorage.setItem(CATEGORIES_KEY, JSON.stringify(categories));
+}
+
+function populateCategorySelect(selectId) {
+    const sel = document.getElementById(selectId);
+    if (!sel) return;
+    const currentVal = sel.value;
+    sel.innerHTML = '<option value="">انتخاب دسته‌بندی...</option>';
+    for (const cat of categories) {
+        const opt = document.createElement('option');
+        opt.value = cat;
+        opt.textContent = cat;
+        sel.appendChild(opt);
+    }
+    sel.value = currentVal;
+}
+
+function populateCategoryFilter() {
+    const sel = document.getElementById('filterCategory');
+    if (!sel) return;
+    const currentVal = sel.value;
+    sel.innerHTML = '<option value="">همه</option>';
+    for (const cat of categories) {
+        const opt = document.createElement('option');
+        opt.value = cat;
+        opt.textContent = cat;
+        sel.appendChild(opt);
+    }
+    sel.value = currentVal;
+}
+
+function addNewCategory() {
+    const input = document.getElementById('newCategoryInput');
+    const name = input.value.trim();
+    if (!name) { showToast('لطفاً نام دسته‌بندی را وارد کنید.', 'error'); return; }
+    if (categories.includes(name)) { showToast('این دسته‌بندی قبلاً وجود دارد.', 'error'); return; }
+    categories.push(name);
+    saveCategories();
+    populateCategorySelect('aCategory');
+    populateCategoryFilter();
+    input.value = '';
+    applyFilters();
+    showToast('دسته‌بندی اضافه شد.', 'success');
+}
+
+function manageCategories() {
+    document.getElementById('categoryModal').classList.add('active');
+    renderCategoryList();
+}
+
+function renderCategoryList() {
+    const container = document.getElementById('categoryList');
+    if (!container) return;
+    if (!categories.length) {
+        container.innerHTML = '<span style="color:#94a3b8;font-size:0.9rem;">هیچ دسته‌بندی ثبت نشده است.</span>';
+        return;
+    }
+    container.innerHTML = categories.map(cat =>
+        `<span class="category-tag">
+            ${cat}
+            <span class="remove-cat" onclick="removeCategory('${cat}')">✕</span>
+        </span>`
+    ).join('');
+}
+
+function removeCategory(name) {
+    if (!confirm(`آیا از حذف دسته‌بندی "${name}" مطمئن هستید؟`)) return;
+    categories = categories.filter(c => c !== name);
+    saveCategories();
+    renderCategoryList();
+    populateCategorySelect('aCategory');
+    populateCategoryFilter();
+    applyFilters();
+    showToast('دسته‌بندی حذف شد.', 'info');
+}
+
+function addCategoryFromManage() {
+    const input = document.getElementById('catManageInput');
+    const name = input.value.trim();
+    if (!name) { showToast('لطفاً نام دسته‌بندی را وارد کنید.', 'error'); return; }
+    if (categories.includes(name)) { showToast('این دسته‌بندی قبلاً وجود دارد.', 'error'); return; }
+    categories.push(name);
+    saveCategories();
+    renderCategoryList();
+    populateCategorySelect('aCategory');
+    populateCategoryFilter();
+    input.value = '';
+    applyFilters();
+    showToast('دسته‌بندی اضافه شد.', 'success');
+}
+
+// ============================================================
+//  COPY PATH
+// ============================================================
+async function copyPath(inputId) {
+    const input = document.getElementById(inputId);
+    if (!input || !input.value) {
+        showToast('مسیری برای کپی وجود ندارد.', 'error');
+        return;
+    }
+    const path = input.value.trim();
+    try {
+        await navigator.clipboard.writeText(path);
+        showToast('✅ مسیر کپی شد: ' + path, 'success');
+    } catch (err) {
+        const textarea = document.createElement('textarea');
+        textarea.value = path;
+        document.body.appendChild(textarea);
+        textarea.select();
+        try {
+            document.execCommand('copy');
+            showToast('✅ مسیر کپی شد: ' + path, 'success');
+        } catch (e) {
+            showToast('❌ کپی ناموفق. لطفاً دستی کپی کنید.', 'error');
+        }
+        textarea.remove();
+    }
+}
+
+function copyPathFromValue(path) {
+    if (!path) {
+        showToast('مسیری برای کپی وجود ندارد.', 'error');
+        return;
+    }
+    navigator.clipboard.writeText(path).then(() => {
+        showToast('✅ مسیر کپی شد: ' + path, 'success');
+    }).catch(() => {
+        const textarea = document.createElement('textarea');
+        textarea.value = path;
+        document.body.appendChild(textarea);
+        textarea.select();
+        try {
+            document.execCommand('copy');
+            showToast('✅ مسیر کپی شد: ' + path, 'success');
+        } catch (e) {
+            showToast('❌ کپی ناموفق. لطفاً دستی کپی کنید.', 'error');
+        }
+        textarea.remove();
+    });
+}
+
+// ============================================================
+//  PERSIAN DATE HELPERS
+// ============================================================
+function gToJStr(date) {
+    if (!date) return '';
+    const d = (date instanceof Date) ? date : new Date(date);
+    const formatter = new Intl.DateTimeFormat('fa-IR', {
+        year: 'numeric', month: '2-digit', day: '2-digit',
+        calendar: 'persian'
+    });
+    const parts = formatter.formatToParts(d);
+    let jy = '', jm = '', jd = '';
+    for (const part of parts) {
+        if (part.type === 'year') jy = part.value;
+        else if (part.type === 'month') jm = part.value;
+        else if (part.type === 'day') jd = part.value;
+    }
+    jy = jy.replace(/[۰-۹]/g, c => String.fromCharCode(c.charCodeAt(0) - 1728));
+    jm = jm.replace(/[۰-۹]/g, c => String.fromCharCode(c.charCodeAt(0) - 1728));
+    jd = jd.replace(/[۰-۹]/g, c => String.fromCharCode(c.charCodeAt(0) - 1728));
+    return jy + '/' + jm.padStart(2, '0') + '/' + jd.padStart(2, '0');
+}
+
+function jStrToTs(s) {
+    if (!s) return null;
+    const normalized = s.replace(/[-\/]/g, '/');
+    const parts = normalized.split('/').map(Number);
+    if (parts.length !== 3 || parts.some(isNaN)) return null;
+    const [jy, jm, jd] = parts;
+    if (jy < 1300 || jy > 1500 || jm < 1 || jm > 12 || jd < 1 || jd > 31) return null;
+    let gy = jy + 621;
+    for (let year = gy - 3; year <= gy + 3; year++) {
+        for (let month = 1; month <= 12; month++) {
+            const daysInMonth = new Date(year, month, 0).getDate();
+            for (let day = 1; day <= daysInMonth; day++) {
+                const testDate = new Date(year, month - 1, day);
+                const formatter = new Intl.DateTimeFormat('fa-IR', {
+                    year: 'numeric', month: '2-digit', day: '2-digit',
+                    calendar: 'persian'
+                });
+                const parts2 = formatter.formatToParts(testDate);
+                let testJy = '', testJm = '', testJd = '';
+                for (const part of parts2) {
+                    if (part.type === 'year') testJy = part.value;
+                    else if (part.type === 'month') testJm = part.value;
+                    else if (part.type === 'day') testJd = part.value;
+                }
+                testJy = testJy.replace(/[۰-۹]/g, c => String.fromCharCode(c.charCodeAt(0) - 1728));
+                testJm = testJm.replace(/[۰-۹]/g, c => String.fromCharCode(c.charCodeAt(0) - 1728));
+                testJd = testJd.replace(/[۰-۹]/g, c => String.fromCharCode(c.charCodeAt(0) - 1728));
+                if (parseInt(testJy) === jy && parseInt(testJm) === jm && parseInt(testJd) === jd) {
+                    return new Date(year, month - 1, day).getTime();
+                }
+            }
+        }
+    }
+    return null;
+}
+
+function jNowStr() { return gToJStr(new Date()); }
+function jNowObj() {
+    const str = jNowStr();
+    const parts = str.split('/');
+    return { jy: parseInt(parts[0], 10), jm: parseInt(parts[1], 10), jd: parseInt(parts[2], 10) };
+}
+function isValidPersianDate(str) {
+    if (!str) return true;
+    return jStrToTs(str) !== null;
+}
+
+// ============================================================
+//  PERSIAN DATEPICKER
+// ============================================================
+let pdpActive = false, pdpInputId = null, pdpYear = 1400, pdpMonth = 1, pdpSelected = '';
+
+function openPersianDatepicker(inputId) {
+    const input = document.getElementById(inputId);
+    if (!input) return;
+    closePersianDatepicker();
+
+    const currentVal = input.value.trim();
+    let initialYear = 1400, initialMonth = 1, initialDay = 1;
+    if (currentVal) {
+        const parts = currentVal.split('/').map(Number);
+        if (parts.length === 3 && parts.every(n => !isNaN(n))) {
+            if (parts[0] >= 1300 && parts[0] <= 1500 && parts[1] >= 1 && parts[1] <= 12 && parts[2] >= 1 && parts[2] <= 31) {
+                initialYear = parts[0];
+                initialMonth = parts[1];
+                initialDay = parts[2];
+            }
+        }
+    } else {
+        const now = jNowObj();
+        initialYear = now.jy || 1400;
+        initialMonth = now.jm || 1;
+        initialDay = now.jd || 1;
+    }
+    pdpYear = initialYear;
+    pdpMonth = initialMonth;
+    pdpSelected = currentVal;
+    pdpInputId = inputId;
+    pdpActive = true;
+    renderPDP();
+}
+
+function closePersianDatepicker() {
+    const el = document.getElementById('pdpContainer');
+    if (el) el.remove();
+    pdpActive = false;
+    pdpInputId = null;
+}
+
+function renderPDP() {
+    const container = document.createElement('div');
+    container.id = 'pdpContainer';
+    container.className = 'pdp-overlay';
+    container.addEventListener('click', function(e) {
+        if (e.target === this) closePersianDatepicker();
+    });
+
+    const box = document.createElement('div');
+    box.className = 'pdp-box';
+
+    const header = document.createElement('div');
+    header.className = 'pdp-header';
+
+    const prevBtn = document.createElement('button');
+    prevBtn.textContent = '›';
+    prevBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        pdpMonth--;
+        if (pdpMonth < 1) { pdpMonth = 12; pdpYear--; }
+        renderPDP();
+    });
+
+    const monthYear = document.createElement('span');
+    monthYear.className = 'pdp-month-year';
+    const monthNames = ['فروردین', 'اردیبهشت', 'خرداد', 'تیر', 'مرداد', 'شهریور', 'مهر', 'آبان', 'آذر', 'دی', 'بهمن', 'اسفند'];
+    monthYear.textContent = monthNames[pdpMonth - 1] + ' ' + pdpYear;
+    monthYear.addEventListener('click', function(e) {
+        e.stopPropagation();
+        const newYear = prompt('سال مورد نظر را وارد کنید (1300-1500):', pdpYear);
+        if (newYear) {
+            const y = parseInt(newYear);
+            if (y >= 1300 && y <= 1500) {
+                pdpYear = y;
+                renderPDP();
+            } else {
+                alert('سال باید بین 1300 تا 1500 باشد.');
+            }
+        }
+    });
+
+    const nextBtn = document.createElement('button');
+    nextBtn.textContent = '‹';
+    nextBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        pdpMonth++;
+        if (pdpMonth > 12) { pdpMonth = 1; pdpYear++; }
+        renderPDP();
+    });
+
+    header.appendChild(prevBtn);
+    header.appendChild(monthYear);
+    header.appendChild(nextBtn);
+    box.appendChild(header);
+
+    const daysGrid = document.createElement('div');
+    daysGrid.className = 'pdp-days';
+    const dowNames = ['ش', 'ی', 'د', 'س', 'چ', 'پ', 'ج'];
+    for (const d of dowNames) {
+        const dowEl = document.createElement('div');
+        dowEl.className = 'pdp-dow';
+        dowEl.textContent = d;
+        daysGrid.appendChild(dowEl);
+    }
+
+    const firstDayOfMonth = getFirstDayOfMonth(pdpYear, pdpMonth);
+    const daysInMonth = getDaysInMonth(pdpYear, pdpMonth);
+    const todayJ = jNowObj();
+
+    const prevMonthDays = getDaysInMonth(pdpYear, pdpMonth - 1 < 1 ? 12 : pdpMonth - 1, pdpMonth - 1 < 1 ? pdpYear - 1 : pdpYear);
+    const startOffset = firstDayOfMonth;
+
+    for (let i = startOffset - 1; i >= 0; i--) {
+        const day = prevMonthDays - i;
+        const btn = document.createElement('button');
+        btn.className = 'pdp-other-month';
+        btn.textContent = day;
+        const prevM = pdpMonth - 1 < 1 ? 12 : pdpMonth - 1;
+        const prevY = pdpMonth - 1 < 1 ? pdpYear - 1 : pdpYear;
+        btn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            pdpMonth = prevM;
+            pdpYear = prevY;
+            selectPDPDay(day);
+        });
+        daysGrid.appendChild(btn);
+    }
+
+    for (let d = 1; d <= daysInMonth; d++) {
+        const btn = document.createElement('button');
+        let cls = '';
+        if (pdpYear === todayJ.jy && pdpMonth === todayJ.jm && d === todayJ.jd) cls += 'pdp-today ';
+        if (pdpSelected && pdpSelected === pdpYear + '/' + String(pdpMonth).padStart(2, '0') + '/' + String(d).padStart(2, '0')) cls += 'pdp-selected ';
+        btn.className = cls;
+        btn.textContent = d;
+        btn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            selectPDPDay(d);
+        });
+        daysGrid.appendChild(btn);
+    }
+
+    const totalCells = 42;
+    const usedCells = startOffset + daysInMonth;
+    const remaining = totalCells - usedCells;
+    for (let d = 1; d <= remaining; d++) {
+        const btn = document.createElement('button');
+        btn.className = 'pdp-other-month';
+        btn.textContent = d;
+        const nextM = pdpMonth + 1 > 12 ? 1 : pdpMonth + 1;
+        const nextY = pdpMonth + 1 > 12 ? pdpYear + 1 : pdpYear;
+        btn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            pdpMonth = nextM;
+            pdpYear = nextY;
+            selectPDPDay(d);
+        });
+        daysGrid.appendChild(btn);
+    }
+    box.appendChild(daysGrid);
+
+    const footer = document.createElement('div');
+    footer.className = 'pdp-footer';
+
+    const todayBtn = document.createElement('button');
+    todayBtn.textContent = 'امروز';
+    todayBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        const now = jNowObj();
+        pdpYear = now.jy;
+        pdpMonth = now.jm;
+        const val = now.jy + '/' + String(now.jm).padStart(2, '0') + '/' + String(now.jd).padStart(2, '0');
+        setPDPValue(val);
+    });
+
+    const clearBtn = document.createElement('button');
+    clearBtn.textContent = 'پاک کردن';
+    clearBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        setPDPValue('');
+    });
+
+    footer.appendChild(todayBtn);
+    footer.appendChild(clearBtn);
+    box.appendChild(footer);
+
+    container.appendChild(box);
+    document.body.appendChild(container);
+}
+
+function getFirstDayOfMonth(jy, jm) {
+    const g = findGregorian(jy, jm, 1);
+    if (!g) return 0;
+    const d = new Date(g.gy, g.gm - 1, g.gd);
+    return (d.getDay() + 1) % 7;
+}
+function getDaysInMonth(jy, jm) {
+    if (jm <= 6) return 31;
+    if (jm <= 11) return 30;
+    return isLeapJ(jy) ? 30 : 29;
+}
+function isLeapJ(jy) {
+    const start = findGregorian(jy, 1, 1);
+    const end = findGregorian(jy, 12, 30);
+    if (!start || !end) return false;
+    const diff = (new Date(end.gy, end.gm - 1, end.gd) - new Date(start.gy, start.gm - 1, start.gd)) / (1000*60*60*24);
+    return diff >= 365;
+}
+function findGregorian(jy, jm, jd) {
+    let gy = jy + 621;
+    for (let year = gy - 3; year <= gy + 3; year++) {
+        for (let month = 1; month <= 12; month++) {
+            const daysInMonth = new Date(year, month, 0).getDate();
+            for (let day = 1; day <= daysInMonth; day++) {
+                const testDate = new Date(year, month - 1, day);
+                const formatter = new Intl.DateTimeFormat('fa-IR', {
+                    year: 'numeric', month: '2-digit', day: '2-digit',
+                    calendar: 'persian'
+                });
+                const parts = formatter.formatToParts(testDate);
+                let testJy = '', testJm = '', testJd = '';
+                for (const part of parts) {
+                    if (part.type === 'year') testJy = part.value;
+                    else if (part.type === 'month') testJm = part.value;
+                    else if (part.type === 'day') testJd = part.value;
+                }
+                testJy = testJy.replace(/[۰-۹]/g, c => String.fromCharCode(c.charCodeAt(0) - 1728));
+                testJm = testJm.replace(/[۰-۹]/g, c => String.fromCharCode(c.charCodeAt(0) - 1728));
+                testJd = testJd.replace(/[۰-۹]/g, c => String.fromCharCode(c.charCodeAt(0) - 1728));
+                if (parseInt(testJy) === jy && parseInt(testJm) === jm && parseInt(testJd) === jd) {
+                    return { gy: year, gm: month, gd: day };
+                }
+            }
+        }
+    }
+    return null;
+}
+function selectPDPDay(day) {
+    const val = pdpYear + '/' + String(pdpMonth).padStart(2, '0') + '/' + String(day).padStart(2, '0');
+    setPDPValue(val);
+}
+function setPDPValue(val) {
+    pdpSelected = val;
+    const input = document.getElementById(pdpInputId);
+    if (input) {
+        input.value = val;
+        input.dispatchEvent(new Event('change'));
+        input.dispatchEvent(new Event('input'));
+    }
+    closePersianDatepicker();
+}
+
+// ============================================================
+//  DB Layer - IndexedDB
+// ============================================================
+const DB_NAME = 'ArticleDashboardDB';
+const DB_VERSION = 2;
+let db = null;
+
+function openDB() {
+    return new Promise((resolve, reject) => {
+        const req = indexedDB.open(DB_NAME, DB_VERSION);
+        req.onupgradeneeded = (e) => {
+            const db = e.target.result;
+            if (!db.objectStoreNames.contains('articles')) {
+                const store = db.createObjectStore('articles', { keyPath: 'id', autoIncrement: true });
+                store.createIndex('status', 'status');
+                store.createIndex('category', 'category');
+                store.createIndex('publishDate', 'publishDate');
+            }
+            if (!db.objectStoreNames.contains('tags')) {
+                const store = db.createObjectStore('tags', { keyPath: 'id', autoIncrement: true });
+                store.createIndex('name', 'name', { unique: true });
+            }
+            if (!db.objectStoreNames.contains('article_tags')) {
+                const store = db.createObjectStore('article_tags', { keyPath: ['articleId', 'tagId'] });
+                store.createIndex('articleId', 'articleId');
+                store.createIndex('tagId', 'tagId');
+            }
+            if (!db.objectStoreNames.contains('history')) {
+                db.createObjectStore('history', { keyPath: 'id', autoIncrement: true });
+            }
+        };
+        req.onsuccess = (e) => {
+            db = e.target.result;
+            resolve(db);
+        };
+        req.onerror = (e) => reject(e.target.error);
+    });
+}
+
+function tx(storeName, mode = 'readonly') {
+    return db.transaction(storeName, mode);
+}
+function getAll(storeName) {
+    return new Promise((resolve) => {
+        const store = tx(storeName).objectStore(storeName);
+        const result = [];
+        store.openCursor().onsuccess = (e) => {
+            const c = e.target.result;
+            if (c) { result.push(c.value); c.continue(); } else resolve(result);
+        };
+    });
+}
+function getById(storeName, id) {
+    return new Promise((resolve) => {
+        const req = tx(storeName).objectStore(storeName).get(id);
+        req.onsuccess = () => resolve(req.result);
+    });
+}
+function put(storeName, data) {
+    return new Promise((resolve) => {
+        const req = tx(storeName, 'readwrite').objectStore(storeName).put(data);
+        req.onsuccess = () => resolve(req.result);
+    });
+}
+function del(storeName, id) {
+    return new Promise((resolve) => {
+        const req = tx(storeName, 'readwrite').objectStore(storeName).delete(id);
+        req.onsuccess = () => resolve();
+    });
+}
+function getByIndex(storeName, indexName, value) {
+    return new Promise((resolve) => {
+        const store = tx(storeName).objectStore(storeName);
+        const idx = store.index(indexName);
+        const result = [];
+        idx.openCursor(value).onsuccess = (e) => {
+            const c = e.target.result;
+            if (c) { result.push(c.value); c.continue(); } else resolve(result);
+        };
+    });
+}
+
+async function getArticles() { return getAll('articles'); }
+async function getArticle(id) { return getById('articles', id); }
+async function saveArticleData(article) {
+    const id = await put('articles', article);
+    await addHistory('article', id, article.title || 'بدون عنوان', 'ویرایش');
+    return id;
+}
+async function deleteArticle(id) {
+    const article = await getArticle(id);
+    const rels = await getByIndex('article_tags', 'articleId', id);
+    for (let r of rels) await del('article_tags', [r.articleId, r.tagId]);
+    await del('articles', id);
+    await addHistory('article', id, article?.title || 'نامشخص', 'حذف');
+}
+
+async function getTags() { return getAll('tags'); }
+async function getTag(id) { return getById('tags', id); }
+async function saveTagData(tag) {
+    try {
+        const id = await put('tags', tag);
+        await addHistory('tag', id, tag.name, 'ویرایش');
+        return id;
+    } catch (err) {
+        if (err.name === 'ConstraintError') {
+            throw new Error('برچسبی با این نام قبلاً وجود دارد.');
+        }
+        throw err;
+    }
+}
+async function deleteTag(id) {
+    const tag = await getTag(id);
+    const rels = await getByIndex('article_tags', 'tagId', id);
+    for (let r of rels) await del('article_tags', [r.articleId, r.tagId]);
+    await del('tags', id);
+    await addHistory('tag', id, tag?.name || 'نامشخص', 'حذف');
+}
+
+async function getTagsForArticle(articleId) {
+    const rels = await getByIndex('article_tags', 'articleId', articleId);
+    const tagIds = rels.map(r => r.tagId);
+    const tags = await getAll('tags');
+    return tags.filter(t => tagIds.includes(t.id));
+}
+async function getArticleCountForTag(tagId) {
+    const rels = await getByIndex('article_tags', 'tagId', tagId);
+    return rels.length;
+}
+async function setArticleTags(articleId, tagIds) {
+    const old = await getByIndex('article_tags', 'articleId', articleId);
+    for (let r of old) await del('article_tags', [r.articleId, r.tagId]);
+    for (let tid of tagIds) {
+        await put('article_tags', { articleId, tagId: tid });
+    }
+}
+async function addHistory(entity, entityId, name, action) {
+    const entry = { entity, entityId, name, action, timestamp: new Date().toISOString() };
+    await put('history', entry);
+}
+
+// ============================================================
+//  STATE
+// ============================================================
+const STATE = {
+    sort: { key: 'id', dir: 'desc' }
+};
+
+// ============================================================
+//  SORT ARTICLES
+// ============================================================
+function sortArticles(articles) {
+    const { key, dir } = STATE.sort;
+    return articles.slice().sort((a, b) => {
+        let av = a[key];
+        let bv = b[key];
+        if (key === 'publishDate') {
+            av = av || '';
+            bv = bv || '';
+        }
+        if (key === 'status') {
+            av = av ?? 0;
+            bv = bv ?? 0;
+        }
+        if (key === 'id') {
+            av = av || 0;
+            bv = bv || 0;
+        }
+        if (typeof av === 'string') av = av.toLowerCase();
+        if (typeof bv === 'string') bv = bv.toLowerCase();
+        if (av < bv) return dir === 'asc' ? -1 : 1;
+        if (av > bv) return dir === 'asc' ? 1 : -1;
+        return 0;
+    });
+}
+
+// ============================================================
+//  UI Logic
+// ============================================================
+let allArticles = [], allTags = [], selectedTagIds = [];
+
+async function loadData() {
+    allArticles = await getArticles();
+    allTags = await getTags();
+    loadCategories();
+    populateCategorySelect('aCategory');
+    populateCategoryFilter();
+    populateTagFilter();
+    updateStats();
+    applyFilters();
+}
+
+function populateCategoryFilter() {
+    const sel = document.getElementById('filterCategory');
+    if (!sel) return;
+    const currentVal = sel.value;
+    sel.innerHTML = '<option value="">همه</option>';
+    for (const cat of categories) {
+        const opt = document.createElement('option');
+        opt.value = cat;
+        opt.textContent = cat;
+        sel.appendChild(opt);
+    }
+    sel.value = currentVal;
+}
+
+function populateTagFilter() {
+    const sel = document.getElementById('filterTag');
+    sel.innerHTML = '<option value="">همه</option>' + allTags.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
+}
+function updateStats() {
+    document.getElementById('totalCount').textContent = allArticles.length;
+    const loaded = allArticles.filter(a => a.status == 1).length;
+    document.getElementById('loadedCount').textContent = loaded;
+    document.getElementById('unloadedCount').textContent = allArticles.length - loaded;
+    document.getElementById('tagCount').textContent = allTags.length;
+}
+
+// ============================================================
+//  مدیریت برچسب‌ها
+// ============================================================
+function openTagManagementModal() {
+    document.getElementById('tagManagementModal').classList.add('active');
+    renderTagManagement();
+    document.getElementById('bulkTagInput').value = '';
+    document.getElementById('bulkStatus').textContent = '';
+}
+
+async function renderTagManagement() {
+    const tbody = document.getElementById('tagManagementBody');
+    if (!allTags.length) {
+        tbody.innerHTML = '<tr><td colspan="5" class="text-center">هیچ برچسبی ثبت نشده است.</td></tr>';
+        return;
+    }
+
+    const allRelations = await getAll('article_tags');
+    const usageMap = {};
+    for (const rel of allRelations) {
+        usageMap[rel.tagId] = (usageMap[rel.tagId] || 0) + 1;
+    }
+
+    const sortSelect = document.getElementById('tagSortSelect');
+    const sortMode = sortSelect ? sortSelect.value : 'id';
+
+    let sortedTags = [...allTags];
+    if (sortMode === 'id') {
+        sortedTags.sort((a, b) => a.id - b.id);
+    } else if (sortMode === 'name') {
+        sortedTags.sort((a, b) => a.name.localeCompare(b.name));
+    } else if (sortMode === 'count_desc') {
+        sortedTags.sort((a, b) => (usageMap[b.id] || 0) - (usageMap[a.id] || 0));
+    } else if (sortMode === 'count_asc') {
+        sortedTags.sort((a, b) => (usageMap[a.id] || 0) - (usageMap[b.id] || 0));
+    }
+
+    let html = '';
+    let rowNumber = 1;
+    for (const t of sortedTags) {
+        const count = usageMap[t.id] || 0;
+        html += `<tr>
+            <td>${rowNumber}</td>
+            <td>${t.name}</td>
+            <td><span style="display:inline-block;width:20px;height:20px;border-radius:4px;border:1px solid #cbd5e1;background:${t.color || '#3b82f6'}"></span></td>
+            <td>${count}</td>
+            <td class="action-btns">
+                <button class="primary" onclick="editTag(${t.id})">✏️</button>
+                <button class="danger" onclick="deleteTagHandler(${t.id})">🗑️</button>
+            </td>
+        </tr>`;
+        rowNumber++;
+    }
+    tbody.innerHTML = html;
+}
+
+document.addEventListener('change', function(e) {
+    if (e.target.id === 'tagSortSelect') {
+        renderTagManagement();
+    }
+});
+
+async function addBulkTags() {
+    const input = document.getElementById('bulkTagInput');
+    const status = document.getElementById('bulkStatus');
+    const raw = input.value.trim();
+    if (!raw) {
+        status.textContent = '⚠️ لطفاً برچسب‌ها را وارد کنید.';
+        status.style.color = '#dc2626';
+        return;
+    }
+    const items = raw.split(/[،,]/).map(s => s.trim()).filter(s => s.length > 0);
+    if (items.length === 0) {
+        status.textContent = '⚠️ برچسب معتبری یافت نشد.';
+        status.style.color = '#dc2626';
+        return;
+    }
+    let added = 0, skipped = 0, errors = [];
+    for (let name of items) {
+        try {
+            const existing = allTags.find(t => t.name.toLowerCase() === name.toLowerCase());
+            if (existing) { skipped++; continue; }
+            const tag = { name, color: '#3b82f6' };
+            await saveTagData(tag);
+            added++;
+        } catch (err) { errors.push(name); }
+    }
+    await loadData();
+    if (document.getElementById('tagManagementModal').classList.contains('active')) renderTagManagement();
+    let msg = `✅ ${added} برچسب جدید اضافه شد.`;
+    if (skipped > 0) msg += ` ${skipped} برچسب تکراری نادیده گرفته شد.`;
+    if (errors.length > 0) msg += ` ❌ خطا در: ${errors.join('، ')}`;
+    status.textContent = msg;
+    status.style.color = errors.length > 0 ? '#dc2626' : '#16a34a';
+    if (added > 0) input.value = '';
+}
+
+// --- انتخابگر برچسب با کیبورد نویگیشن ---
+let selectedSuggestionIndex = -1;
+let suggestionItems = [];
+
+function initTagSelector(initialTagIds = []) {
+    selectedTagIds = [...initialTagIds];
+    selectedSuggestionIndex = -1;
+    suggestionItems = [];
+    renderSelectedTags();
+    document.getElementById('tagSearchInput').value = '';
+    document.getElementById('tagSuggestions').classList.remove('show');
+}
+
+function renderSelectedTags() {
+    const container = document.getElementById('selectedTagsContainer');
+    if (!selectedTagIds.length) {
+        container.innerHTML = '<span style="color:#94a3b8;font-size:0.85rem;">هیچ برچسبی انتخاب نشده است</span>';
+        return;
+    }
+    const tags = allTags.filter(t => selectedTagIds.includes(t.id));
+    container.innerHTML = tags.map(t =>
+        `<span class="tag-item" style="border-color:${t.color||'#3b82f6'}">
+            ${t.name}
+            <span class="remove" onclick="removeTagFromSelection(${t.id})">✕</span>
+        </span>`
+    ).join('');
+}
+function removeTagFromSelection(tagId) {
+    selectedTagIds = selectedTagIds.filter(id => id !== tagId);
+    selectedSuggestionIndex = -1;
+    renderSelectedTags();
+    updateSuggestions();
+}
+function addSelectedTag() {
+    const input = document.getElementById('tagSearchInput');
+    const val = input.value.trim();
+    if (!val) return;
+    const found = allTags.find(t => t.name.toLowerCase() === val.toLowerCase());
+    if (found && !selectedTagIds.includes(found.id)) {
+        selectedTagIds.push(found.id);
+        selectedSuggestionIndex = -1;
+        renderSelectedTags();
+        input.value = '';
+        document.getElementById('tagSuggestions').classList.remove('show');
+        updateSuggestions();
+    } else {
+        showToast('برچسبی با این نام یافت نشد یا قبلاً انتخاب شده است.', 'error');
+    }
+}
+function updateSuggestions() {
+    const input = document.getElementById('tagSearchInput');
+    const query = input.value.trim().toLowerCase();
+    const suggestionsBox = document.getElementById('tagSuggestions');
+    if (!query) {
+        suggestionsBox.classList.remove('show');
+        selectedSuggestionIndex = -1;
+        suggestionItems = [];
+        return;
+    }
+    const filtered = allTags.filter(t =>
+        t.name.toLowerCase().includes(query) && !selectedTagIds.includes(t.id)
+    );
+    if (filtered.length === 0) {
+        suggestionsBox.classList.remove('show');
+        selectedSuggestionIndex = -1;
+        suggestionItems = [];
+        return;
+    }
+    suggestionItems = filtered;
+    selectedSuggestionIndex = -1;
+    suggestionsBox.innerHTML = filtered.map((t, index) =>
+        `<div class="suggestion-item" data-index="${index}" onclick="selectSuggestion(${t.id})">${t.name}</div>`
+    ).join('');
+    suggestionsBox.classList.add('show');
+}
+function selectSuggestion(tagId) {
+    if (!selectedTagIds.includes(tagId)) {
+        selectedTagIds.push(tagId);
+        selectedSuggestionIndex = -1;
+        renderSelectedTags();
+    }
+    document.getElementById('tagSearchInput').value = '';
+    document.getElementById('tagSuggestions').classList.remove('show');
+    updateSuggestions();
+}
+
+document.addEventListener('keydown', function(e) {
+    const searchInput = document.getElementById('tagSearchInput');
+    const suggestionsBox = document.getElementById('tagSuggestions');
+    if (!searchInput || document.activeElement !== searchInput) return;
+    if (!suggestionsBox.classList.contains('show')) return;
+
+    const items = suggestionsBox.querySelectorAll('.suggestion-item');
+    if (!items.length) return;
+
+    if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        selectedSuggestionIndex = Math.min(selectedSuggestionIndex + 1, items.length - 1);
+        updateActiveSuggestion(items);
+    } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        selectedSuggestionIndex = Math.max(selectedSuggestionIndex - 1, -1);
+        updateActiveSuggestion(items);
+    } else if (e.key === 'Enter') {
+        e.preventDefault();
+        if (selectedSuggestionIndex >= 0 && selectedSuggestionIndex < items.length) {
+            const target = items[selectedSuggestionIndex];
+            if (target) {
+                const tagId = parseInt(target.dataset.index);
+                const tag = suggestionItems[tagId];
+                if (tag) selectSuggestion(tag.id);
+            }
+        }
+    }
+});
+
+function updateActiveSuggestion(items) {
+    items.forEach((el, idx) => {
+        el.classList.toggle('active', idx === selectedSuggestionIndex);
+    });
+    if (selectedSuggestionIndex >= 0 && selectedSuggestionIndex < items.length) {
+        items[selectedSuggestionIndex].scrollIntoView({ block: 'nearest' });
+    }
+}
+
+// --- فیلتر و نمایش ---
+async function applyFilters() {
+    const status = document.getElementById('filterStatus').value;
+    const category = document.getElementById('filterCategory').value;
+    const tagId = document.getElementById('filterTag').value;
+    const search = document.getElementById('searchInput').value.trim().toLowerCase();
+
+    let filtered = allArticles;
+    if (status !== '') filtered = filtered.filter(a => a.status == status);
+    if (category) filtered = filtered.filter(a => a.category === category);
+    if (search) filtered = filtered.filter(a => a.title.toLowerCase().includes(search));
+    if (tagId) {
+        const tagIdNum = parseInt(tagId);
+        const articleIds = new Set();
+        const rels = await getByIndex('article_tags', 'tagId', tagIdNum);
+        rels.forEach(r => articleIds.add(r.articleId));
+        filtered = filtered.filter(a => articleIds.has(a.id));
+    }
+
+    filtered = sortArticles(filtered);
+    renderTable(filtered);
+    updateSortIndicators();
+}
+
+// ============================================================
+//  SORT INDICATORS
+// ============================================================
+function updateSortIndicators() {
+    const headers = document.querySelectorAll('th[data-sort]');
+    headers.forEach(th => {
+        const key = th.dataset.sort;
+        const ico = th.querySelector('.sort-ico');
+        if (!ico) return;
+        if (key === STATE.sort.key) {
+            th.classList.add('sorted');
+            ico.textContent = STATE.sort.dir === 'asc' ? '▲' : '▼';
+        } else {
+            th.classList.remove('sorted');
+            ico.textContent = '⇅';
+        }
+    });
+}
+
+// ============================================================
+//  ESCAPE FUNCTION
+// ============================================================
+function esc(s) {
+    if (s == null) return '';
+    return String(s).replace(/[&<>"']/g, function(m) {
+        if (m === '&') return '&amp;';
+        if (m === '<') return '&lt;';
+        if (m === '>') return '&gt;';
+        if (m === '"') return '&quot;';
+        if (m === "'") return '&#39;';
+        return m;
+    });
+}
+
+// ============================================================
+//  RENDER TABLE (با شماره ردیف ثابت)
+// ============================================================
+async function renderTable(articles) {
+    const tbody = document.getElementById('tableBody');
+    if (!articles.length) {
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center">هیچ مقاله‌ای یافت نشد</td></tr>';
+        return;
+    }
+
+    const sortedAll = [...allArticles].sort((a, b) => a.id - b.id);
+    const rowMap = new Map();
+    sortedAll.forEach((article, index) => {
+        rowMap.set(article.id, index + 1);
+    });
+
+    let html = '';
+    for (let a of articles) {
+        const tags = await getTagsForArticle(a.id);
+        const tagHtml = tags.map(t => `<span class="tag-pill" style="border-color:${t.color||'#3b82f6'}">${t.name}</span>`).join('');
+        const statusHtml = a.status == 1 ?
+            '<span class="status-badge status-loaded">بارگذاری شده</span>' :
+            '<span class="status-badge status-unloaded">بارگذاری نشده</span>';
+        const persianDate = a.publishDate ? gToJStr(new Date(a.publishDate)) : '-';
+        const pathAttr = esc(a.localPath || '');
+        const rowNumber = rowMap.get(a.id) || '?';
+        html += `<tr>
+            <td>${rowNumber}</td>
+            <td><strong>${esc(a.title || 'بدون عنوان')}</strong></td>
+            <td>${statusHtml}</td>
+            <td>${esc(a.category || '-')}</td>
+            <td>${persianDate}</td>
+            <td>${tagHtml}</td>
+            <td class="action-btns">
+                <button onclick="openSite('${esc(a.siteUrl || '')}')" title="مشاهده در سایت">🔗</button>
+                <button class="copy-path-btn" data-path="${pathAttr}" title="کپی مسیر پوشه">📋 کپی مسیر</button>
+                <button class="primary" onclick="editArticle(${a.id})">✏️</button>
+                <button class="danger" onclick="deleteArticleHandler(${a.id})">🗑️</button>
+            </td>
+        </tr>`;
+    }
+    tbody.innerHTML = html;
+}
+
+// ============================================================
+//  EVENT DELEGATION
+// ============================================================
+document.addEventListener('click', function(e) {
+    const btn = e.target.closest('.copy-path-btn');
+    if (btn) {
+        const path = btn.getAttribute('data-path');
+        if (path !== null && path !== undefined) {
+            copyPathFromValue(path);
+        } else {
+            showToast('مسیری برای کپی وجود ندارد.', 'error');
+        }
+        e.preventDefault();
+    }
+});
+
+document.addEventListener('click', function(e) {
+    const th = e.target.closest('th[data-sort]');
+    if (th) {
+        const key = th.dataset.sort;
+        if (STATE.sort.key === key) {
+            STATE.sort.dir = STATE.sort.dir === 'asc' ? 'desc' : 'asc';
+        } else {
+            STATE.sort.key = key;
+            STATE.sort.dir = 'asc';
+        }
+        applyFilters();
+    }
+});
+
+// ============================================================
+//  FUNCTIONS
+// ============================================================
+function openSite(url) {
+    if (url) window.open(url, '_blank');
+    else showToast('لینک سایت ثبت نشده است.', 'error');
+}
+
+function getBackupFileName() {
+    const today = jNowStr();
+    const parts = today.split('/');
+    const jDate = parts[0] + '-' + parts[1] + '-' + parts[2];
+    return 'backup_' + jDate + '.json';
+}
+
+// --- مودال مقاله ---
+function openArticleModal(data = null) {
+    const modal = document.getElementById('articleModal');
+    if (!modal) { console.error('modal not found'); return; }
+    document.getElementById('articleForm').reset();
+    document.getElementById('editArticleId').value = '';
+    document.getElementById('articleModalTitle').textContent = 'افزودن مقاله جدید';
+    initTagSelector([]);
+    populateCategorySelect('aCategory');
+
+    if (data) {
+        document.getElementById('articleModalTitle').textContent = 'ویرایش مقاله';
+        document.getElementById('editArticleId').value = data.id;
+        document.getElementById('aTitle').value = data.title || '';
+        document.getElementById('aStatus').value = data.status ?? 0;
+        document.getElementById('aPublishDate').value = data.publishDate ? gToJStr(new Date(data.publishDate)) : '';
+        document.getElementById('aCategory').value = data.category || '';
+        document.getElementById('aLocalPath').value = data.localPath || '';
+        document.getElementById('aSiteUrl').value = data.siteUrl || '';
+        document.getElementById('aDescription').value = data.description || '';
+        getTagsForArticle(data.id).then(tags => {
+            const tagIds = tags.map(t => t.id);
+            initTagSelector(tagIds);
+        });
+    }
+    modal.classList.add('active');
+
+    const searchInput = document.getElementById('tagSearchInput');
+    if (searchInput) {
+        searchInput.oninput = updateSuggestions;
+    }
+    document.addEventListener('click', function closeSuggestions(e) {
+        if (!e.target.closest('.tag-selector')) {
+            document.getElementById('tagSuggestions').classList.remove('show');
+            selectedSuggestionIndex = -1;
+            suggestionItems = [];
+        }
+    });
+}
+
+function closeModal(id) {
+    document.getElementById(id).classList.remove('active');
+    if (id === 'tagManagementModal') loadData();
+    if (id === 'categoryModal') {
+        populateCategorySelect('aCategory');
+        populateCategoryFilter();
+        applyFilters();
+    }
+    closePersianDatepicker();
+}
+
+// --- ذخیره مقاله ---
+async function saveArticle(e) {
+    e.preventDefault();
+    const id = document.getElementById('editArticleId').value;
+    const persianDateStr = document.getElementById('aPublishDate').value.trim();
+    if (persianDateStr && !isValidPersianDate(persianDateStr)) {
+        showToast('تاریخ شمسی نامعتبر است. لطفاً به صورت YYYY/MM/DD وارد کنید.', 'error');
+        return;
+    }
+    let gregorianDate = null;
+    if (persianDateStr) {
+        const ts = jStrToTs(persianDateStr);
+        if (ts) gregorianDate = new Date(ts).toISOString().split('T')[0];
+        if (!gregorianDate) {
+            showToast('تاریخ شمسی وارد شده معتبر نیست.', 'error');
+            return;
+        }
+    }
+    const article = {
+        title: document.getElementById('aTitle').value.trim(),
+        status: parseInt(document.getElementById('aStatus').value),
+        publishDate: gregorianDate,
+        category: document.getElementById('aCategory').value.trim(),
+        localPath: document.getElementById('aLocalPath').value.trim(),
+        siteUrl: document.getElementById('aSiteUrl').value.trim(),
+        description: document.getElementById('aDescription').value.trim(),
+    };
+    if (!article.title) { showToast('عنوان الزامی است.', 'error'); return; }
+    if (id) article.id = parseInt(id);
+    const savedId = await saveArticleData(article);
+    await setArticleTags(savedId, selectedTagIds);
+    closeModal('articleModal');
+    await loadData();
+    showToast('مقاله با موفقیت ذخیره شد.', 'success');
+}
+
+async function editArticle(id) {
+    const article = await getArticle(id);
+    if (article) openArticleModal(article);
+}
+async function deleteArticleHandler(id) {
+    if (!confirm('آیا از حذف این مقاله مطمئن هستید؟')) return;
+    await deleteArticle(id);
+    await loadData();
+    showToast('مقاله حذف شد.', 'info');
+}
+
+// --- مدیریت برچسب‌ها (تکی) ---
+function openTagModal(data = null) {
+    document.getElementById('tagModal').classList.add('active');
+    document.getElementById('tagForm').reset();
+    document.getElementById('editTagId').value = '';
+    document.getElementById('tagModalTitle').textContent = 'افزودن برچسب جدید';
+    if (data) {
+        document.getElementById('tagModalTitle').textContent = 'ویرایش برچسب';
+        document.getElementById('editTagId').value = data.id;
+        document.getElementById('tName').value = data.name || '';
+        document.getElementById('tColor').value = data.color || '#3b82f6';
+    }
+}
+async function editTag(id) {
+    const tag = await getTag(id);
+    if (tag) openTagModal(tag);
+}
+async function saveTag(e) {
+    e.preventDefault();
+    const id = document.getElementById('editTagId').value;
+    const tag = { name: document.getElementById('tName').value.trim(), color: document.getElementById('tColor').value };
+    if (!tag.name) { showToast('نام برچسب الزامی است.', 'error'); return; }
+    if (id) tag.id = parseInt(id);
+    try {
+        await saveTagData(tag);
+        closeModal('tagModal');
+        await loadData();
+        if (document.getElementById('tagManagementModal').classList.contains('active')) renderTagManagement();
+        showToast('برچسب ذخیره شد.', 'success');
+    } catch (err) { showToast(err.message, 'error'); }
+}
+async function deleteTagHandler(id) {
+    if (!confirm('⚠️ آیا از حذف این برچسب مطمئن هستید؟\nهمه ارتباطات این برچسب با مقالات نیز حذف خواهند شد.')) return;
+    const tag = await getTag(id);
+    if (!tag) return;
+    const name = prompt(`برای تایید حذف برچسب "${tag.name}"، نام آن را وارد کنید:`);
+    if (name !== tag.name) { showToast('حذف لغو شد. نام وارد شده مطابقت نداشت.', 'error'); return; }
+    await deleteTag(id);
+    await loadData();
+    if (document.getElementById('tagManagementModal').classList.contains('active')) renderTagManagement();
+    showToast('برچسب حذف شد.', 'info');
+}
+
+// --- پشتیبان و بازیابی ---
+async function exportData() {
+    try {
+        const fileName = getBackupFileName();
+        if (!('showSaveFilePicker' in window)) {
+            const articles = await getAll('articles');
+            const tags = await getAll('tags');
+            const rels = await getAll('article_tags');
+            const history = await getAll('history');
+            const data = { articles, tags, rels, history, categories, exportedAt: new Date().toISOString() };
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = fileName;
+            a.click();
+            URL.revokeObjectURL(url);
+            showToast('پشتیبان ذخیره شد.', 'success');
+            return;
+        }
+        const opts = {
+            suggestedName: fileName,
+            types: [{ description: 'JSON Backup', accept: { 'application/json': ['.json'] } }],
+        };
+        const fileHandle = await window.showSaveFilePicker(opts);
+        const writable = await fileHandle.createWritable();
+        const articles = await getAll('articles');
+        const tags = await getAll('tags');
+        const rels = await getAll('article_tags');
+        const history = await getAll('history');
+        const data = { articles, tags, rels, history, categories, exportedAt: new Date().toISOString() };
+        const json = JSON.stringify(data, null, 2);
+        await writable.write(json);
+        await writable.close();
+        showToast('پشتیبان با موفقیت ذخیره شد.', 'success');
+    } catch (err) {
+        if (err.name !== 'AbortError' && err.name !== 'SecurityError') {
+            showToast('خطا در ذخیره پشتیبان: ' + err.message, 'error');
+        }
+    }
+}
+
+function importData() { document.getElementById('importFile').click(); }
+async function handleImport(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const text = await file.text();
+    try {
+        const data = JSON.parse(text);
+        if (!data.articles || !data.tags) throw new Error('فرمت فایل نامعتبر است.');
+        if (!confirm('این عمل تمام داده‌های فعلی را بازنویسی می‌کند. ادامه؟')) return;
+        db.close();
+        const req = indexedDB.deleteDatabase(DB_NAME);
+        req.onsuccess = () => {
+            openDB().then(() => {
+                importAllData(data).then(() => {
+                    if (data.categories && Array.isArray(data.categories)) {
+                        categories = data.categories;
+                        saveCategories();
+                    }
+                    showToast('داده‌ها با موفقیت بازیابی شدند.', 'success');
+                    loadData();
+                });
+            });
+        };
+    } catch (err) { showToast('خطا در خواندن فایل: ' + err.message, 'error'); }
+    e.target.value = '';
+}
+async function importAllData(data) {
+    for (let a of data.articles) await put('articles', a);
+    for (let t of data.tags) await put('tags', t);
+    for (let r of data.rels) await put('article_tags', r);
+    if (data.history) for (let h of data.history) await put('history', h);
+}
+
+// ============================================================
+//  INITIALIZE
+// ============================================================
+(async function init() {
+    await openDB();
+    loadCategories();
+    await loadData();
+    const history = await getAll('history');
+    console.log('تاریخچه تغییرات:', history);
+
+    // بررسی وضعیت اتصال به ابر
+    await checkCloudConnection();
+
+    const newBtn = document.getElementById('newArticleBtn');
+    if (newBtn) {
+        newBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            openArticleModal();
+        });
+    }
+
+    const sortSelect = document.getElementById('tagSortSelect');
+    if (sortSelect) {
+        sortSelect.addEventListener('change', function() {
+            renderTagManagement();
+        });
+    }
+
+    // چک کردن اتصال به صورت دوره‌ای (هر ۵ دقیقه)
+    setInterval(checkCloudConnection, 300000);
+})();
+</script>
+</body>
+</html>
