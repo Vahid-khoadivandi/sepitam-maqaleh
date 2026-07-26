@@ -519,7 +519,7 @@
 
 <script>
 // ============================================================
-//  JSONBIN CONFIG - از تصاویر شما
+//  JSONBIN CONFIG
 // ============================================================
 const JSONBIN_BIN_ID = '6a6598fdf5f4af5e29c20f31';
 const JSONBIN_ACCESS_KEY = '$2a$10$I7LtzkBIws2j.vCXHv1Sc.Sh1QYYU43H4wgYIQTM59TAhwuApkQDi';
@@ -559,7 +559,17 @@ function updateCloudStatus(status, message = '') {
 }
 
 // ============================================================
-//  JSONBIN FUNCTIONS (بدون احراز هویت کاربر)
+//  FUNCTIONS TO ENSURE DB IS OPEN
+// ============================================================
+async function ensureDbOpen() {
+    if (!db) {
+        await openDB();
+    }
+    return db;
+}
+
+// ============================================================
+//  JSONBIN FUNCTIONS (اصلاح شده با ensureDbOpen)
 // ============================================================
 async function syncToCloud() {
     if (isCloudSyncing) {
@@ -568,22 +578,25 @@ async function syncToCloud() {
     }
     isCloudSyncing = true;
     updateCloudStatus('syncing');
-    
+
     try {
+        // اطمینان از باز بودن پایگاه داده
+        await ensureDbOpen();
+
         showToast('⏳ در حال ذخیره در فضای ابری...', 'info');
         const articles = await getAll('articles');
         const tags = await getAll('tags');
         const rels = await getAll('article_tags');
         const history = await getAll('history');
-        const data = { 
-            articles, 
-            tags, 
-            rels, 
-            history, 
-            categories, 
-            exportedAt: new Date().toISOString() 
+        const data = {
+            articles,
+            tags,
+            rels,
+            history,
+            categories,
+            exportedAt: new Date().toISOString()
         };
-        
+
         const response = await fetch(JSONBIN_URL, {
             method: 'PUT',
             headers: {
@@ -592,12 +605,12 @@ async function syncToCloud() {
             },
             body: JSON.stringify(data)
         });
-        
+
         if (!response.ok) {
             const errorText = await response.text();
             throw new Error('خطا در ذخیره‌سازی: ' + errorText);
         }
-        
+
         updateCloudStatus('online');
         showToast('✅ داده‌ها با موفقیت در فضای ابری ذخیره شدند.', 'success');
     } catch (err) {
@@ -616,7 +629,7 @@ async function restoreFromCloud() {
     }
     isCloudSyncing = true;
     updateCloudStatus('syncing');
-    
+
     try {
         showToast('⏳ در حال بازیابی از فضای ابری...', 'info');
         const response = await fetch(JSONBIN_URL, {
@@ -624,25 +637,28 @@ async function restoreFromCloud() {
                 'X-Access-Key': JSONBIN_ACCESS_KEY,
             }
         });
-        
+
         if (!response.ok) {
             const errorText = await response.text();
             throw new Error('خطا در بازیابی: ' + errorText);
         }
-        
+
         const result = await response.json();
         const data = result.record || result;
-        
+
         if (!data.articles || !data.tags) {
             throw new Error('فرمت داده نامعتبر است یا داده‌ای وجود ندارد.');
         }
-        
+
         if (!confirm('⚠️ این عمل تمام داده‌های فعلی را بازنویسی می‌کند. ادامه؟')) {
             updateCloudStatus('online');
             isCloudSyncing = false;
             return;
         }
-        
+
+        // اطمینان از باز بودن db قبل از بستن
+        await ensureDbOpen();
+
         db.close();
         const req = indexedDB.deleteDatabase(DB_NAME);
         req.onsuccess = () => {
