@@ -519,10 +519,11 @@
 
 <script>
 // ============================================================
-//  JSONBIN CONFIG
+//  JSONBIN CONFIG - با Master Key صحیح
 // ============================================================
 const JSONBIN_BIN_ID = '6a6598fdf5f4af5e29c20f31';
-const JSONBIN_ACCESS_KEY = '$2a$10$thnrf05Cai266DgJozaNq.7Qcdco0qK9aOh8g12s.kNcg.m3ejVyW';
+// کلید اصلی (Master Key) - برای خواندن/نوشتن Bin خصوصی
+const JSONBIN_MASTER_KEY = '$2a$10$I7LtzkbIws2j.vCXHv1Sc.ShlQYYU43H4wgYIQTM59TAhwuApkQDi';
 const JSONBIN_URL = `https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}`;
 
 let isCloudSyncing = false;
@@ -569,7 +570,7 @@ async function ensureDbOpen() {
 }
 
 // ============================================================
-//  JSONBIN FUNCTIONS (اصلاح شده با ensureDbOpen)
+//  JSONBIN FUNCTIONS (با X-Master-Key)
 // ============================================================
 async function syncToCloud() {
     if (isCloudSyncing) {
@@ -580,7 +581,6 @@ async function syncToCloud() {
     updateCloudStatus('syncing');
 
     try {
-        // اطمینان از باز بودن پایگاه داده
         await ensureDbOpen();
 
         showToast('⏳ در حال ذخیره در فضای ابری...', 'info');
@@ -601,7 +601,7 @@ async function syncToCloud() {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
-                'X-Access-Key': JSONBIN_ACCESS_KEY,
+                'X-Master-Key': JSONBIN_MASTER_KEY, // استفاده از Master Key
             },
             body: JSON.stringify(data)
         });
@@ -634,7 +634,7 @@ async function restoreFromCloud() {
         showToast('⏳ در حال بازیابی از فضای ابری...', 'info');
         const response = await fetch(JSONBIN_URL, {
             headers: {
-                'X-Access-Key': JSONBIN_ACCESS_KEY,
+                'X-Master-Key': JSONBIN_MASTER_KEY, // استفاده از Master Key
             }
         });
 
@@ -656,9 +656,7 @@ async function restoreFromCloud() {
             return;
         }
 
-        // اطمینان از باز بودن db قبل از بستن
         await ensureDbOpen();
-
         db.close();
         const req = indexedDB.deleteDatabase(DB_NAME);
         req.onsuccess = () => {
@@ -688,7 +686,7 @@ async function checkCloudConnection() {
     try {
         const response = await fetch(JSONBIN_URL, {
             headers: {
-                'X-Access-Key': JSONBIN_ACCESS_KEY,
+                'X-Master-Key': JSONBIN_MASTER_KEY,
             }
         });
         if (response.ok) {
@@ -2000,7 +1998,6 @@ async function importAllData(data) {
     const history = await getAll('history');
     console.log('تاریخچه تغییرات:', history);
 
-    // بررسی وضعیت اتصال به ابر
     await checkCloudConnection();
 
     const newBtn = document.getElementById('newArticleBtn');
@@ -2018,7 +2015,6 @@ async function importAllData(data) {
         });
     }
 
-    // چک کردن اتصال به صورت دوره‌ای (هر ۵ دقیقه)
     setInterval(checkCloudConnection, 300000);
 })();
 </script>
