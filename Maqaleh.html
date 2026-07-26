@@ -3,10 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>داشبورد مدیریت مقالات - با پشتیبانی Dropbox</title>
+    <title>داشبورد مدیریت مقالات - همگام‌سازی ابری</title>
     <link href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css" rel="stylesheet">
-    <!-- Dropbox SDK -->
-    <script src="https://unpkg.com/dropbox@10.34.0/dist/Dropbox-sdk.min.js"></script>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
@@ -30,11 +28,11 @@
         button.success:hover { background: #15803d; }
         button.secondary { background: #64748b; color: white; }
         button.secondary:hover { background: #475569; }
-        button.dropbox-btn {
-            background: #0061ff;
+        button.cloud-btn {
+            background: #8b5cf6;
             color: white;
         }
-        button.dropbox-btn:hover { background: #0050d4; }
+        button.cloud-btn:hover { background: #7c3aed; }
         input, select, textarea {
             width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1;
             border-radius: 6px; font-size: 0.95rem; background: white;
@@ -293,7 +291,7 @@
             to { opacity: 1; transform: translateY(0); }
         }
 
-        .dropbox-status {
+        .cloud-status {
             display: inline-block;
             padding: 4px 12px;
             border-radius: 20px;
@@ -301,13 +299,17 @@
             font-weight: 600;
             margin-right: 8px;
         }
-        .dropbox-status.connected {
+        .cloud-status.online {
             background: #dcfce7;
             color: #166534;
         }
-        .dropbox-status.disconnected {
+        .cloud-status.offline {
             background: #fee2e2;
             color: #991b1b;
+        }
+        .cloud-status.syncing {
+            background: #fef3c7;
+            color: #92400e;
         }
 
         @media (max-width: 700px) {
@@ -329,8 +331,9 @@
             <button class="secondary" onclick="manageCategories()">📂 مدیریت دسته‌بندی‌ها</button>
             <button class="success" onclick="exportData()">💾 پشتیبان‌گیری</button>
             <button class="secondary" onclick="importData()">📂 بازیابی پشتیبان</button>
-            <button class="dropbox-btn" onclick="toggleDropbox()">☁️ Dropbox</button>
-            <span id="dropboxStatus" class="dropbox-status disconnected">قطع</span>
+            <button class="cloud-btn" onclick="syncToCloud()">☁️ ذخیره در ابر</button>
+            <button class="cloud-btn" onclick="restoreFromCloud()" style="background:#6d28d9;">📥 بازیابی از ابر</button>
+            <span id="cloudStatus" class="cloud-status offline">آفلاین</span>
         </div>
     </div>
 
@@ -510,43 +513,19 @@
         </div>
     </div>
 
-    <!-- Modal Dropbox -->
-    <div class="modal" id="dropboxModal">
-        <div class="modal-content" style="max-width: 500px;">
-            <span class="close" onclick="closeModal('dropboxModal')">&times;</span>
-            <h2>☁️ اتصال به Dropbox</h2>
-            <div style="padding:10px 0;">
-                <div id="dropboxAuthArea">
-                    <p style="color:var(--text-2);margin-bottom:12px;">برای ذخیره و بازیابی داده‌ها در فضای ابری Dropbox، ابتدا اتصال برقرار کنید.</p>
-                    <button class="dropbox-btn" onclick="authenticateDropbox()" style="width:100%;padding:10px;font-size:1rem;">🔑 اتصال به Dropbox</button>
-                    <p style="font-size:0.8rem;color:var(--text-3);margin-top:8px;">پس از کلیک، پنجره جدیدی برای ورود به حساب Dropbox باز می‌شود.</p>
-                </div>
-                <div id="dropboxActions" style="display:none;">
-                    <p style="color:var(--ok);margin-bottom:12px;">✅ اتصال برقرار است!</p>
-                    <div style="display:flex;flex-direction:column;gap:8px;">
-                        <button class="success" onclick="syncToDropbox()" style="padding:10px;">☁️ ارسال پشتیبان به Dropbox</button>
-                        <button class="secondary" onclick="restoreFromDropbox()" style="padding:10px;">📥 دریافت پشتیبان از Dropbox</button>
-                        <button class="danger" onclick="logoutDropbox()" style="padding:10px;">🚪 قطع اتصال</button>
-                    </div>
-                </div>
-                <div id="dropboxStatusText" style="margin-top:12px;font-size:0.9rem;color:var(--text-3);"></div>
-            </div>
-        </div>
-    </div>
-
     <input type="file" id="importFile" accept=".json" style="display:none" onchange="handleImport(event)">
     <div class="toast-wrap" id="toastWrap"></div>
 </div>
 
 <script>
 // ============================================================
-//  DROPBOX CONFIG
+//  JSONBIN CONFIG - از تصاویر شما
 // ============================================================
-const DROPBOX_APP_KEY = '6mi1648srbo781r';
-const DROPBOX_REDIRECT_URI = window.location.href.split('?')[0].split('#')[0];
+const JSONBIN_BIN_ID = '6a6598fdf5f4af5e29c20f31';
+const JSONBIN_ACCESS_KEY = '$2a$10$I7LtzkBIws2j.vCXHv1Sc.Sh1QYYU43H4wgYIQTM59TAhwuApkQDi';
+const JSONBIN_URL = `https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}`;
 
-let dbx = null;
-let dropboxToken = null;
+let isCloudSyncing = false;
 
 // ============================================================
 //  TOAST NOTIFICATION
@@ -565,119 +544,105 @@ function showToast(msg, type = 'info') {
 }
 
 // ============================================================
-//  DROPBOX INTEGRATION
+//  CLOUD STATUS
 // ============================================================
-function initDropbox() {
-    const savedToken = localStorage.getItem('dropbox_token');
-    if (savedToken) {
-        dropboxToken = savedToken;
-        dbx = new Dropbox.Dropbox({ accessToken: dropboxToken });
-        updateDropboxUI(true);
-        return true;
-    }
-    updateDropboxUI(false);
-    return false;
+function updateCloudStatus(status, message = '') {
+    const el = document.getElementById('cloudStatus');
+    if (!el) return;
+    el.className = 'cloud-status ' + status;
+    const labels = {
+        'online': '✅ متصل',
+        'offline': '⛔ آفلاین',
+        'syncing': '🔄 در حال همگام‌سازی...'
+    };
+    el.textContent = labels[status] || status;
 }
 
-function updateDropboxUI(connected) {
-    const statusEl = document.getElementById('dropboxStatus');
-    if (connected) {
-        statusEl.textContent = 'متصل';
-        statusEl.className = 'dropbox-status connected';
-    } else {
-        statusEl.textContent = 'قطع';
-        statusEl.className = 'dropbox-status disconnected';
-    }
-    const authArea = document.getElementById('dropboxAuthArea');
-    const actionsArea = document.getElementById('dropboxActions');
-    if (authArea) authArea.style.display = connected ? 'none' : 'block';
-    if (actionsArea) actionsArea.style.display = connected ? 'block' : 'none';
-}
-
-function authenticateDropbox() {
-    const authUrl = `https://www.dropbox.com/oauth2/authorize?client_id=${DROPBOX_APP_KEY}&redirect_uri=${encodeURIComponent(DROPBOX_REDIRECT_URI)}&response_type=token`;
-    window.open(authUrl, '_blank', 'width=600,height=700');
-    showToast('⏳ منتظر تأیید احراز هویت در پنجره باز شده باشید...', 'info');
-}
-
-function handleDropboxRedirect() {
-    const hash = window.location.hash;
-    if (hash && hash.includes('access_token=')) {
-        const token = hash.split('access_token=')[1].split('&')[0];
-        dropboxToken = token;
-        localStorage.setItem('dropbox_token', token);
-        dbx = new Dropbox.Dropbox({ accessToken: token });
-        window.history.replaceState({}, document.title, window.location.pathname);
-        updateDropboxUI(true);
-        showToast('✅ اتصال به Dropbox برقرار شد.', 'success');
-        // بستن مودال اگر باز باشد
-        const modal = document.getElementById('dropboxModal');
-        if (modal) modal.classList.remove('active');
-        return true;
-    }
-    return false;
-}
-
-function toggleDropbox() {
-    const modal = document.getElementById('dropboxModal');
-    modal.classList.add('active');
-    updateDropboxUI(!!dbx);
-}
-
-async function syncToDropbox() {
-    if (!dbx) {
-        showToast('⚠️ لطفاً ابتدا به Dropbox متصل شوید.', 'warn');
+// ============================================================
+//  JSONBIN FUNCTIONS (بدون احراز هویت کاربر)
+// ============================================================
+async function syncToCloud() {
+    if (isCloudSyncing) {
+        showToast('⏳ همگام‌سازی در حال انجام است...', 'warn');
         return;
     }
+    isCloudSyncing = true;
+    updateCloudStatus('syncing');
+    
     try {
-        showToast('⏳ در حال آپلود به Dropbox...', 'info');
+        showToast('⏳ در حال ذخیره در فضای ابری...', 'info');
         const articles = await getAll('articles');
         const tags = await getAll('tags');
         const rels = await getAll('article_tags');
         const history = await getAll('history');
-        const data = { articles, tags, rels, history, categories, exportedAt: new Date().toISOString() };
-        const content = JSON.stringify(data, null, 2);
-        const blob = new Blob([content], { type: 'application/json' });
-        const fileName = getBackupFileName();
-
-        try {
-            await dbx.filesGetMetadata({ path: '/' + fileName });
-            await dbx.filesUpload({
-                path: '/' + fileName,
-                contents: blob,
-                mode: { '.tag': 'overwrite' }
-            });
-        } catch (err) {
-            if (err.status === 409) {
-                await dbx.filesUpload({
-                    path: '/' + fileName,
-                    contents: blob
-                });
-            } else {
-                throw err;
-            }
+        const data = { 
+            articles, 
+            tags, 
+            rels, 
+            history, 
+            categories, 
+            exportedAt: new Date().toISOString() 
+        };
+        
+        const response = await fetch(JSONBIN_URL, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Access-Key': JSONBIN_ACCESS_KEY,
+            },
+            body: JSON.stringify(data)
+        });
+        
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error('خطا در ذخیره‌سازی: ' + errorText);
         }
-        showToast('✅ داده‌ها با موفقیت در Dropbox ذخیره شدند.', 'success');
+        
+        updateCloudStatus('online');
+        showToast('✅ داده‌ها با موفقیت در فضای ابری ذخیره شدند.', 'success');
     } catch (err) {
-        showToast('❌ خطا در ذخیره‌سازی در Dropbox: ' + (err.message || 'نامشخص'), 'error');
+        updateCloudStatus('offline');
+        showToast('❌ خطا در ذخیره‌سازی: ' + err.message, 'error');
         console.error(err);
+    } finally {
+        isCloudSyncing = false;
     }
 }
 
-async function restoreFromDropbox() {
-    if (!dbx) {
-        showToast('⚠️ لطفاً ابتدا به Dropbox متصل شوید.', 'warn');
+async function restoreFromCloud() {
+    if (isCloudSyncing) {
+        showToast('⏳ همگام‌سازی در حال انجام است...', 'warn');
         return;
     }
+    isCloudSyncing = true;
+    updateCloudStatus('syncing');
+    
     try {
-        showToast('⏳ در حال بازیابی از Dropbox...', 'info');
-        const fileName = getBackupFileName();
-        const response = await dbx.filesDownload({ path: '/' + fileName });
-        const blob = response.result.fileBlob;
-        const text = await blob.text();
-        const data = JSON.parse(text);
-        if (!data.articles || !data.tags) throw new Error('فرمت فایل نامعتبر است.');
-        if (!confirm('این عمل تمام داده‌های فعلی را بازنویسی می‌کند. ادامه؟')) return;
+        showToast('⏳ در حال بازیابی از فضای ابری...', 'info');
+        const response = await fetch(JSONBIN_URL, {
+            headers: {
+                'X-Access-Key': JSONBIN_ACCESS_KEY,
+            }
+        });
+        
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error('خطا در بازیابی: ' + errorText);
+        }
+        
+        const result = await response.json();
+        const data = result.record || result;
+        
+        if (!data.articles || !data.tags) {
+            throw new Error('فرمت داده نامعتبر است یا داده‌ای وجود ندارد.');
+        }
+        
+        if (!confirm('⚠️ این عمل تمام داده‌های فعلی را بازنویسی می‌کند. ادامه؟')) {
+            updateCloudStatus('online');
+            isCloudSyncing = false;
+            return;
+        }
+        
         db.close();
         const req = indexedDB.deleteDatabase(DB_NAME);
         req.onsuccess = () => {
@@ -687,28 +652,37 @@ async function restoreFromDropbox() {
                         categories = data.categories;
                         saveCategories();
                     }
+                    updateCloudStatus('online');
                     showToast('✅ داده‌ها با موفقیت بازیابی شدند.', 'success');
                     loadData();
                 });
             });
         };
     } catch (err) {
-        if (err.status === 409) {
-            showToast('⚠️ فایل پشتیبان در Dropbox یافت نشد.', 'warn');
-        } else {
-            showToast('❌ خطا در بازیابی از Dropbox: ' + (err.message || 'نامشخص'), 'error');
-        }
+        updateCloudStatus('offline');
+        showToast('❌ خطا در بازیابی: ' + err.message, 'error');
         console.error(err);
+    } finally {
+        isCloudSyncing = false;
     }
 }
 
-function logoutDropbox() {
-    localStorage.removeItem('dropbox_token');
-    dropboxToken = null;
-    dbx = null;
-    updateDropboxUI(false);
-    showToast('🔓 از Dropbox خارج شدید.', 'info');
-    closeModal('dropboxModal');
+// چک کردن وضعیت اتصال به JSONBin
+async function checkCloudConnection() {
+    try {
+        const response = await fetch(JSONBIN_URL, {
+            headers: {
+                'X-Access-Key': JSONBIN_ACCESS_KEY,
+            }
+        });
+        if (response.ok) {
+            updateCloudStatus('online');
+        } else {
+            updateCloudStatus('offline');
+        }
+    } catch (err) {
+        updateCloudStatus('offline');
+    }
 }
 
 // ============================================================
@@ -1598,7 +1572,6 @@ function selectSuggestion(tagId) {
     updateSuggestions();
 }
 
-// مدیریت کیبورد برای جستجوی برچسب
 document.addEventListener('keydown', function(e) {
     const searchInput = document.getElementById('tagSearchInput');
     const suggestionsBox = document.getElementById('tagSuggestions');
@@ -2011,9 +1984,8 @@ async function importAllData(data) {
     const history = await getAll('history');
     console.log('تاریخچه تغییرات:', history);
 
-    // راه‌اندازی Dropbox
-    handleDropboxRedirect();
-    initDropbox();
+    // بررسی وضعیت اتصال به ابر
+    await checkCloudConnection();
 
     const newBtn = document.getElementById('newArticleBtn');
     if (newBtn) {
@@ -2029,6 +2001,9 @@ async function importAllData(data) {
             renderTagManagement();
         });
     }
+
+    // چک کردن اتصال به صورت دوره‌ای (هر ۵ دقیقه)
+    setInterval(checkCloudConnection, 300000);
 })();
 </script>
 </body>
