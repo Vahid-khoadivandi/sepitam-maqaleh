@@ -368,6 +368,26 @@
         .confirm-box .btn-row .btn-cancel:hover {
             background: #cbd5e1;
         }
+        .confirm-box .password-input {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #cbd5e1;
+            border-radius: 8px;
+            font-size: 1rem;
+            margin: 10px 0 16px;
+            text-align: center;
+            direction: ltr;
+            letter-spacing: 4px;
+        }
+        .confirm-box .password-input:focus {
+            outline: none;
+            border-color: #8b5cf6;
+        }
+        .confirm-box .error-msg {
+            color: #dc2626;
+            font-size: 0.9rem;
+            margin: 8px 0;
+        }
         @keyframes fadeIn {
             from { opacity: 0; }
             to { opacity: 1; }
@@ -630,16 +650,26 @@ async function ensureDbOpen() {
 }
 
 // ============================================================
-//  CUSTOM CONFIRM DIALOG (بدون alert)
+//  CUSTOM CONFIRM WITH PASSWORD SUPPORT
 // ============================================================
-function showConfirm(title, message, confirmText = 'بله', cancelText = 'خیر') {
+function showConfirm(title, message, confirmText = 'بله', cancelText = 'خیر', requirePassword = false) {
     return new Promise((resolve) => {
         const overlay = document.createElement('div');
         overlay.className = 'confirm-overlay';
+        let passwordHtml = '';
+        if (requirePassword) {
+            passwordHtml = `
+                <div style="margin: 10px 0 16px;">
+                    <input type="password" class="password-input" id="passwordInput" placeholder="رمز عبور را وارد کنید" maxlength="10" autocomplete="off">
+                    <div id="passwordError" class="error-msg" style="display:none;">رمز اشتباه است.</div>
+                </div>
+            `;
+        }
         overlay.innerHTML = `
             <div class="confirm-box">
                 <h3>${title}</h3>
                 <p>${message}</p>
+                ${passwordHtml}
                 <div class="btn-row">
                     <button class="btn-confirm" id="confirmYes">${confirmText}</button>
                     <button class="btn-cancel" id="confirmNo">${cancelText}</button>
@@ -648,14 +678,43 @@ function showConfirm(title, message, confirmText = 'بله', cancelText = 'خی�
         `;
         document.body.appendChild(overlay);
 
-        overlay.querySelector('#confirmYes').addEventListener('click', () => {
+        const confirmBtn = overlay.querySelector('#confirmYes');
+        const cancelBtn = overlay.querySelector('#confirmNo');
+        const passwordInput = overlay.querySelector('#passwordInput');
+        const errorMsg = overlay.querySelector('#passwordError');
+
+        function handleConfirm() {
+            if (requirePassword) {
+                const pass = passwordInput.value.trim();
+                if (pass !== '1461') {
+                    if (errorMsg) errorMsg.style.display = 'block';
+                    passwordInput.focus();
+                    passwordInput.select();
+                    return;
+                }
+            }
             overlay.remove();
             resolve(true);
-        });
-        overlay.querySelector('#confirmNo').addEventListener('click', () => {
+        }
+
+        function handleCancel() {
             overlay.remove();
             resolve(false);
-        });
+        }
+
+        confirmBtn.addEventListener('click', handleConfirm);
+        cancelBtn.addEventListener('click', handleCancel);
+
+        if (passwordInput) {
+            passwordInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleConfirm();
+                }
+            });
+            setTimeout(() => passwordInput.focus(), 100);
+        }
+
         overlay.addEventListener('click', (e) => {
             if (e.target === overlay) {
                 overlay.remove();
@@ -666,7 +725,28 @@ function showConfirm(title, message, confirmText = 'بله', cancelText = 'خی�
 }
 
 // ============================================================
-//  JSONBIN FUNCTIONS (با محافظت در برابر ذخیره خالی)
+//  CHECK CLOUD DATA COUNT (helper)
+// ============================================================
+async function getCloudDataCount() {
+    try {
+        const response = await fetch(JSONBIN_URL, {
+            headers: { 'X-Master-Key': JSONBIN_MASTER_KEY }
+        });
+        if (!response.ok) return 0;
+        const result = await response.json();
+        const data = result.record || result;
+        return (data.articles && data.articles.length) || 0;
+    } catch {
+        return 0;
+    }
+}
+
+async function isCloudEmpty() {
+    return (await getCloudDataCount()) === 0;
+}
+
+// ============================================================
+//  JSONBIN FUNCTIONS (با محافظت و رمز)
 // ============================================================
 async function syncToCloud() {
     if (isCloudSyncing) {
@@ -684,73 +764,59 @@ async function syncToCloud() {
         const rels = await getAll('article_tags');
         const history = await getAll('history');
 
-        // ===== بررسی خالی بودن داده‌های محلی =====
-        const isEmpty = articles.length === 0 && tags.length === 0;
+        const localEmpty = articles.length === 0 && tags.length === 0;
 
-        // اگر داده‌های محلی خالی است، ابتدا داده‌های ابری را بررسی کن
-        if (isEmpty) {
-            let cloudHasData = false;
-            try {
-                const checkResponse = await fetch(JSONBIN_URL, {
-                    headers: { 'X-Master-Key': JSONBIN_MASTER_KEY }
-                });
-                if (checkResponse.ok) {
-                    const result = await checkResponse.json();
-                    const cloudData = result.record || result;
-                    if (cloudData.articles && cloudData.articles.length > 0) {
-                        cloudHasData = true;
-                    }
-                }
-            } catch (e) {
-                // اگر خطایی در بررسی رخ داد (مثلاً Bin خالی یا不存在)، فرض می‌کنیم داده‌ای در ابر نیست.
-                cloudHasData = false;
-            }
+        // بررسی وضعیت ابر
+        const cloudHasData = !(await isCloudEmpty());
+
+        // اگر داده محلی خالی است
+        if (localEmpty) {
+            let proceed = false;
+            let message = '';
+            let title = '';
 
             if (cloudHasData) {
-                // داده‌های محلی خالی اما ابر پُر است → هشدار
-                const confirmMessage = `
-                    ⚠️ داده‌های محلی شما خالی است، اما در فضای ابری داده وجود دارد (${await getCloudDataCount()} مقاله).
-                    آیا مطمئن هستید که می‌خواهید داده‌های خالی را جایگزین داده‌های ابری کنید؟
+                title = '⚠️ هشدار! داده‌های محلی خالی است';
+                message = `
+                    در فضای ابری ${await getCloudDataCount()} مقاله وجود دارد.
+                    اگر ادامه دهید، تمام داده‌های موجود در ابر با داده‌های خالی بازنویسی می‌شوند و از بین می‌روند.
                     <br><br>
-                    اگر «بله» را انتخاب کنید، تمام داده‌های موجود در ابر با داده‌های خالی بازنویسی می‌شوند و از بین می‌روند.
-                    اگر «خیر» را انتخاب کنید، عملیات لغو می‌شود.
+                    برای تأیید، رمز عبور را وارد کنید:
                 `;
-                const confirmed = await showConfirm(
-                    '⚠️ هشدار! داده‌های محلی خالی است',
-                    confirmMessage,
-                    'بله، بازنویسی کن',
-                    'خیر، لغو کن'
-                );
+                const confirmed = await showConfirm(title, message, 'بله، بازنویسی کن', 'خیر، لغو کن', true);
                 if (!confirmed) {
                     updateCloudStatus('online');
                     isCloudSyncing = false;
                     showToast('⏹️ عملیات ذخیره‌سازی لغو شد.', 'info');
                     return;
                 }
+                proceed = true;
             } else {
-                // هم محلی خالی و هم ابر خالی → فقط اطلاع‌رسانی
-                const confirmMessage = `
+                title = '📭 داده‌های محلی خالی است';
+                message = `
                     داده‌های محلی شما خالی است و در فضای ابری نیز داده‌ای وجود ندارد.
                     آیا می‌خواهید یک فایل خالی در ابر ذخیره کنید؟
                     <br><br>
-                    توصیه می‌کنیم ابتدا داده‌های خود را ایجاد کنید و سپس ذخیره کنید.
+                    (برای ذخیره فایل خالی، رمز عبور را وارد کنید)
                 `;
-                const confirmed = await showConfirm(
-                    '📭 داده‌های محلی خالی است',
-                    confirmMessage,
-                    'بله، ذخیره کن',
-                    'خیر، لغو کن'
-                );
+                const confirmed = await showConfirm(title, message, 'بله، ذخیره کن', 'خیر، لغو کن', true);
                 if (!confirmed) {
                     updateCloudStatus('online');
                     isCloudSyncing = false;
                     showToast('⏹️ عملیات ذخیره‌سازی لغو شد.', 'info');
                     return;
                 }
+                proceed = true;
+            }
+
+            if (!proceed) {
+                updateCloudStatus('online');
+                isCloudSyncing = false;
+                return;
             }
         }
 
-        // ===== ادامه ذخیره‌سازی =====
+        // ذخیره‌سازی اصلی
         showToast('⏳ در حال ذخیره در فضای ابری...', 'info');
         const data = {
             articles,
@@ -783,21 +849,6 @@ async function syncToCloud() {
         console.error(err);
     } finally {
         isCloudSyncing = false;
-    }
-}
-
-// تابع کمکی برای دریافت تعداد مقالات ابری
-async function getCloudDataCount() {
-    try {
-        const response = await fetch(JSONBIN_URL, {
-            headers: { 'X-Master-Key': JSONBIN_MASTER_KEY }
-        });
-        if (!response.ok) return 0;
-        const result = await response.json();
-        const data = result.record || result;
-        return (data.articles && data.articles.length) || 0;
-    } catch {
-        return 0;
     }
 }
 
@@ -837,7 +888,8 @@ async function restoreFromCloud() {
                 '📭 داده‌های ابری خالی است',
                 'فضای ابری هیچ داده‌ای ندارد. آیا باز هم می‌خواهید داده‌های محلی را پاک کنید؟',
                 'بله، پاک کن',
-                'خیر، لغو کن'
+                'خیر، لغو کن',
+                true  // رمز برای پاک کردن داده‌های محلی با داده‌های خالی
             );
             if (!confirmed) {
                 updateCloudStatus('online');
@@ -847,14 +899,14 @@ async function restoreFromCloud() {
             }
         }
 
-        // بررسی اینکه آیا داده‌های محلی وجود دارد و کاربر می‌خواهد جایگزین شود
         const localArticles = await getAll('articles');
         if (localArticles.length > 0) {
             const confirmed = await showConfirm(
                 '⚠️ بازنویسی داده‌های محلی',
                 'داده‌های محلی شما شامل ' + localArticles.length + ' مقاله است. آیا مطمئن هستید که می‌خواهید آنها را با داده‌های ابری جایگزین کنید؟',
                 'بله، جایگزین کن',
-                'خیر، لغو کن'
+                'خیر، لغو کن',
+                true  // رمز برای جایگزینی داده‌های محلی
             );
             if (!confirmed) {
                 updateCloudStatus('online');
