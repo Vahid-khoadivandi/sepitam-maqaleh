@@ -312,6 +312,67 @@
             color: #92400e;
         }
 
+        /* Confirm dialog custom */
+        .confirm-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 99999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: fadeIn 0.2s ease;
+        }
+        .confirm-box {
+            background: white;
+            border-radius: 16px;
+            padding: 30px;
+            max-width: 450px;
+            width: 90%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            text-align: center;
+        }
+        .confirm-box h3 {
+            font-size: 1.2rem;
+            margin-bottom: 10px;
+            color: #1e293b;
+        }
+        .confirm-box p {
+            color: #475569;
+            font-size: 0.95rem;
+            margin-bottom: 20px;
+            line-height: 1.8;
+        }
+        .confirm-box .btn-row {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        .confirm-box .btn-row button {
+            padding: 8px 24px;
+            font-size: 0.95rem;
+            border-radius: 8px;
+        }
+        .confirm-box .btn-row .btn-confirm {
+            background: #dc2626;
+            color: white;
+        }
+        .confirm-box .btn-row .btn-confirm:hover {
+            background: #b91c1c;
+        }
+        .confirm-box .btn-row .btn-cancel {
+            background: #e2e8f0;
+            color: #1e293b;
+        }
+        .confirm-box .btn-row .btn-cancel:hover {
+            background: #cbd5e1;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
         @media (max-width: 700px) {
             .filters .filter-group { flex: 1 1 100%; }
             .stats { grid-template-columns: 1fr 1fr; }
@@ -519,7 +580,7 @@
 
 <script>
 // ============================================================
-//  JSONBIN CONFIG - با Master Key صحیح از تصویر اول
+//  JSONBIN CONFIG
 // ============================================================
 const JSONBIN_BIN_ID = '6a6598fdf5f4af5e29c20f31';
 const JSONBIN_MASTER_KEY = '$2a$10$I7LtzkbIws2j.vCXHv1Sc.ShlQYYU43H4wgYIQTM59TAhwuApkQDi';
@@ -569,7 +630,43 @@ async function ensureDbOpen() {
 }
 
 // ============================================================
-//  JSONBIN FUNCTIONS (با X-Master-Key)
+//  CUSTOM CONFIRM DIALOG (بدون alert)
+// ============================================================
+function showConfirm(title, message, confirmText = 'بله', cancelText = 'خیر') {
+    return new Promise((resolve) => {
+        const overlay = document.createElement('div');
+        overlay.className = 'confirm-overlay';
+        overlay.innerHTML = `
+            <div class="confirm-box">
+                <h3>${title}</h3>
+                <p>${message}</p>
+                <div class="btn-row">
+                    <button class="btn-confirm" id="confirmYes">${confirmText}</button>
+                    <button class="btn-cancel" id="confirmNo">${cancelText}</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(overlay);
+
+        overlay.querySelector('#confirmYes').addEventListener('click', () => {
+            overlay.remove();
+            resolve(true);
+        });
+        overlay.querySelector('#confirmNo').addEventListener('click', () => {
+            overlay.remove();
+            resolve(false);
+        });
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) {
+                overlay.remove();
+                resolve(false);
+            }
+        });
+    });
+}
+
+// ============================================================
+//  JSONBIN FUNCTIONS (با محافظت در برابر ذخیره خالی)
 // ============================================================
 async function syncToCloud() {
     if (isCloudSyncing) {
@@ -582,11 +679,79 @@ async function syncToCloud() {
     try {
         await ensureDbOpen();
 
-        showToast('⏳ در حال ذخیره در فضای ابری...', 'info');
         const articles = await getAll('articles');
         const tags = await getAll('tags');
         const rels = await getAll('article_tags');
         const history = await getAll('history');
+
+        // ===== بررسی خالی بودن داده‌های محلی =====
+        const isEmpty = articles.length === 0 && tags.length === 0;
+
+        // اگر داده‌های محلی خالی است، ابتدا داده‌های ابری را بررسی کن
+        if (isEmpty) {
+            let cloudHasData = false;
+            try {
+                const checkResponse = await fetch(JSONBIN_URL, {
+                    headers: { 'X-Master-Key': JSONBIN_MASTER_KEY }
+                });
+                if (checkResponse.ok) {
+                    const result = await checkResponse.json();
+                    const cloudData = result.record || result;
+                    if (cloudData.articles && cloudData.articles.length > 0) {
+                        cloudHasData = true;
+                    }
+                }
+            } catch (e) {
+                // اگر خطایی در بررسی رخ داد (مثلاً Bin خالی یا不存在)، فرض می‌کنیم داده‌ای در ابر نیست.
+                cloudHasData = false;
+            }
+
+            if (cloudHasData) {
+                // داده‌های محلی خالی اما ابر پُر است → هشدار
+                const confirmMessage = `
+                    ⚠️ داده‌های محلی شما خالی است، اما در فضای ابری داده وجود دارد (${await getCloudDataCount()} مقاله).
+                    آیا مطمئن هستید که می‌خواهید داده‌های خالی را جایگزین داده‌های ابری کنید؟
+                    <br><br>
+                    اگر «بله» را انتخاب کنید، تمام داده‌های موجود در ابر با داده‌های خالی بازنویسی می‌شوند و از بین می‌روند.
+                    اگر «خیر» را انتخاب کنید، عملیات لغو می‌شود.
+                `;
+                const confirmed = await showConfirm(
+                    '⚠️ هشدار! داده‌های محلی خالی است',
+                    confirmMessage,
+                    'بله، بازنویسی کن',
+                    'خیر، لغو کن'
+                );
+                if (!confirmed) {
+                    updateCloudStatus('online');
+                    isCloudSyncing = false;
+                    showToast('⏹️ عملیات ذخیره‌سازی لغو شد.', 'info');
+                    return;
+                }
+            } else {
+                // هم محلی خالی و هم ابر خالی → فقط اطلاع‌رسانی
+                const confirmMessage = `
+                    داده‌های محلی شما خالی است و در فضای ابری نیز داده‌ای وجود ندارد.
+                    آیا می‌خواهید یک فایل خالی در ابر ذخیره کنید؟
+                    <br><br>
+                    توصیه می‌کنیم ابتدا داده‌های خود را ایجاد کنید و سپس ذخیره کنید.
+                `;
+                const confirmed = await showConfirm(
+                    '📭 داده‌های محلی خالی است',
+                    confirmMessage,
+                    'بله، ذخیره کن',
+                    'خیر، لغو کن'
+                );
+                if (!confirmed) {
+                    updateCloudStatus('online');
+                    isCloudSyncing = false;
+                    showToast('⏹️ عملیات ذخیره‌سازی لغو شد.', 'info');
+                    return;
+                }
+            }
+        }
+
+        // ===== ادامه ذخیره‌سازی =====
+        showToast('⏳ در حال ذخیره در فضای ابری...', 'info');
         const data = {
             articles,
             tags,
@@ -621,6 +786,21 @@ async function syncToCloud() {
     }
 }
 
+// تابع کمکی برای دریافت تعداد مقالات ابری
+async function getCloudDataCount() {
+    try {
+        const response = await fetch(JSONBIN_URL, {
+            headers: { 'X-Master-Key': JSONBIN_MASTER_KEY }
+        });
+        if (!response.ok) return 0;
+        const result = await response.json();
+        const data = result.record || result;
+        return (data.articles && data.articles.length) || 0;
+    } catch {
+        return 0;
+    }
+}
+
 async function restoreFromCloud() {
     if (isCloudSyncing) {
         showToast('⏳ همگام‌سازی در حال انجام است...', 'warn');
@@ -639,6 +819,9 @@ async function restoreFromCloud() {
 
         if (!response.ok) {
             const errorText = await response.text();
+            if (response.status === 404) {
+                throw new Error('هیچ داده‌ای در فضای ابری یافت نشد. ابتدا داده‌ها را ذخیره کنید.');
+            }
             throw new Error('خطا در بازیابی: ' + errorText);
         }
 
@@ -649,10 +832,36 @@ async function restoreFromCloud() {
             throw new Error('فرمت داده نامعتبر است یا داده‌ای وجود ندارد.');
         }
 
-        if (!confirm('⚠️ این عمل تمام داده‌های فعلی را بازنویسی می‌کند. ادامه؟')) {
-            updateCloudStatus('online');
-            isCloudSyncing = false;
-            return;
+        if (data.articles.length === 0 && data.tags.length === 0) {
+            const confirmed = await showConfirm(
+                '📭 داده‌های ابری خالی است',
+                'فضای ابری هیچ داده‌ای ندارد. آیا باز هم می‌خواهید داده‌های محلی را پاک کنید؟',
+                'بله، پاک کن',
+                'خیر، لغو کن'
+            );
+            if (!confirmed) {
+                updateCloudStatus('online');
+                isCloudSyncing = false;
+                showToast('⏹️ عملیات بازیابی لغو شد.', 'info');
+                return;
+            }
+        }
+
+        // بررسی اینکه آیا داده‌های محلی وجود دارد و کاربر می‌خواهد جایگزین شود
+        const localArticles = await getAll('articles');
+        if (localArticles.length > 0) {
+            const confirmed = await showConfirm(
+                '⚠️ بازنویسی داده‌های محلی',
+                'داده‌های محلی شما شامل ' + localArticles.length + ' مقاله است. آیا مطمئن هستید که می‌خواهید آنها را با داده‌های ابری جایگزین کنید؟',
+                'بله، جایگزین کن',
+                'خیر، لغو کن'
+            );
+            if (!confirmed) {
+                updateCloudStatus('online');
+                isCloudSyncing = false;
+                showToast('⏹️ عملیات بازیابی لغو شد.', 'info');
+                return;
+            }
         }
 
         await ensureDbOpen();
@@ -699,7 +908,7 @@ async function checkCloudConnection() {
 }
 
 // ============================================================
-//  CATEGORY MANAGEMENT (سایر بخش‌ها مانند قبل)
+//  CATEGORY MANAGEMENT
 // ============================================================
 const CATEGORIES_KEY = 'article_categories';
 let categories = [];
@@ -1997,7 +2206,6 @@ async function importAllData(data) {
     const history = await getAll('history');
     console.log('تاریخچه تغییرات:', history);
 
-    // بررسی وضعیت اتصال به ابر
     await checkCloudConnection();
 
     const newBtn = document.getElementById('newArticleBtn');
@@ -2015,7 +2223,6 @@ async function importAllData(data) {
         });
     }
 
-    // چک کردن اتصال به صورت دوره‌ای (هر ۵ دقیقه)
     setInterval(checkCloudConnection, 300000);
 })();
 </script>
